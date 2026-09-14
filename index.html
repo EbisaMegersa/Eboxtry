@@ -344,6 +344,7 @@
         appId: "1:10893756797:web:3f406e643d00b1ddd96414",
         apiKey: "AIzaSyCnBgUnv_1I6viObzzuh-uzb89iSsIIGVc",
         authDomain: "jovial-facet-307pf.firebaseapp.com",
+        firestoreDatabaseId: "ai-studio-telegramreferral-3d7511eb-c5cb-4b25-84a9-96579f9f30b6",
         storageBucket: "jovial-facet-307pf.firebasestorage.app",
         messagingSenderId: "10893756797"
       };
@@ -555,12 +556,11 @@
         if (isConfigured && window.firebase) {
           try {
             // Initialize real Firebase App
-            if (!firebase.apps.length) {
-              firebase.initializeApp(firebaseConfig);
-            }
+            const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
 
-            // Initialize Firestore
-            firestoreDb = firebase.firestore();
+            // Initialize Firestore targeting the specific database instance
+            const dbId = firebaseConfig.firestoreDatabaseId;
+            firestoreDb = dbId ? app.firestore(dbId) : firebase.firestore();
 
             // Also initialize Realtime Database if databaseURL is present
             if (firebaseConfig.databaseURL) {
