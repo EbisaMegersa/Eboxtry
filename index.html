@@ -61,7 +61,7 @@
 
     <div class="max-w-md mx-auto w-full px-4 pt-5 space-y-5">
 
-      <!-- HEADER: PROFILE -->
+      <!-- HEADER: PROFILE & CONNECTION STATUS -->
       <header class="flex items-center justify-between bg-cardBg/90 backdrop-blur-md p-3.5 rounded-2xl border border-cardBorder">
         <div class="flex items-center gap-3">
           <div id="userAvatar" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-telegram to-blue-600 flex items-center justify-center text-white font-bold text-base shadow-md">
@@ -71,6 +71,10 @@
             <div class="flex items-center gap-1.5">
               <h1 id="userFirstName" class="font-bold text-sm text-slate-100">Telegram User</h1>
               <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono">#<span id="userTelegramId">--</span></span>
+            </div>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span id="statusIndicatorDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+              <span id="statusText" class="text-[11px] font-medium text-amber-300">Connecting to BJS...</span>
             </div>
           </div>
         </div>
@@ -174,6 +178,8 @@
       const userAvatarEl = document.getElementById("userAvatar");
       const userFirstNameEl = document.getElementById("userFirstName");
       const userTelegramIdEl = document.getElementById("userTelegramId");
+      const statusIndicatorDot = document.getElementById("statusIndicatorDot");
+      const statusText = document.getElementById("statusText");
 
       const balanceDisplay = document.getElementById("balanceDisplay");
       const referralsDisplay = document.getElementById("referralsDisplay");
@@ -247,15 +253,23 @@
       }
 
       // =========================================================================
-      // FETCH REAL DATA FROM BOTS.BUSINESS WEBHOOK (SILENT BACKGROUND SYNC)
+      // FETCH REAL DATA FROM BOTS.BUSINESS WEBHOOK
       // =========================================================================
       async function fetchRealBalance() {
         triggerHaptic("light");
         refreshSpinner.classList.add("animate-spin-fast");
 
+        if (statusIndicatorDot && statusText) {
+          statusIndicatorDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+          statusText.textContent = "Syncing with BJS...";
+          statusText.className = "text-[11px] font-medium text-amber-300";
+        }
+
         try {
           const targetUrl = new URL(WEBHOOK_URL);
-          targetUrl.searchParams.set("tg_id", userId);
+          if (userId && userId !== "0") {
+            targetUrl.searchParams.set("user_id", userId);
+          }
 
           const res = await fetch(targetUrl.toString(), {
             method: "GET",
@@ -267,10 +281,25 @@
             if (data && (data.balance !== undefined || data.status === "success")) {
               balanceDisplay.textContent = Number(data.balance || 0).toLocaleString();
               referralsDisplay.textContent = Number(data.referrals || 0).toLocaleString();
+
+              if (statusIndicatorDot && statusText) {
+                statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                statusText.textContent = "Synced with Bots.business";
+                statusText.className = "text-[11px] font-medium text-emerald-400";
+              }
+            } else {
+              throw new Error("Invalid response format");
             }
+          } else {
+            throw new Error(`HTTP ${res.status}`);
           }
         } catch (err) {
           console.warn("Bots.business Webhook Fetch Error:", err);
+          if (statusIndicatorDot && statusText) {
+            statusIndicatorDot.className = "w-2 h-2 rounded-full bg-rose-500";
+            statusText.textContent = "Webhook Offline";
+            statusText.className = "text-[11px] font-medium text-rose-300";
+          }
         } finally {
           refreshSpinner.classList.remove("animate-spin-fast");
         }
