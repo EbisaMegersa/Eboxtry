@@ -61,7 +61,7 @@
 
     <div class="max-w-md mx-auto w-full px-4 pt-5 space-y-5">
 
-      <!-- HEADER: PROFILE & BOT SYNC STATUS -->
+      <!-- HEADER: PROFILE -->
       <header class="flex items-center justify-between bg-cardBg/90 backdrop-blur-md p-3.5 rounded-2xl border border-cardBorder">
         <div class="flex items-center gap-3">
           <div id="userAvatar" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-telegram to-blue-600 flex items-center justify-center text-white font-bold text-base shadow-md">
@@ -71,10 +71,6 @@
             <div class="flex items-center gap-1.5">
               <h1 id="userFirstName" class="font-bold text-sm text-slate-100">Telegram User</h1>
               <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono">#<span id="userTelegramId">--</span></span>
-            </div>
-            <div class="flex items-center gap-1.5 mt-0.5">
-              <span id="statusIndicatorDot" class="w-2 h-2 rounded-full bg-slate-500"></span>
-              <span id="statusText" class="text-[11px] font-medium text-slate-400">Connecting to BJS...</span>
             </div>
           </div>
         </div>
@@ -92,7 +88,7 @@
               <svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
               </svg>
-              Bots.business Account Balance
+              Account Balance
             </span>
             <button id="refreshBalanceBtn" class="flex items-center gap-1.5 text-xs text-telegram hover:text-cyan-400 transition font-semibold bg-telegram/10 hover:bg-telegram/20 px-2.5 py-1 rounded-lg border border-telegram/20 active:scale-95">
               <svg id="refreshSpinner" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,8 +174,6 @@
       const userAvatarEl = document.getElementById("userAvatar");
       const userFirstNameEl = document.getElementById("userFirstName");
       const userTelegramIdEl = document.getElementById("userTelegramId");
-      const statusIndicatorDot = document.getElementById("statusIndicatorDot");
-      const statusText = document.getElementById("statusText");
 
       const balanceDisplay = document.getElementById("balanceDisplay");
       const referralsDisplay = document.getElementById("referralsDisplay");
@@ -253,19 +247,15 @@
       }
 
       // =========================================================================
-      // FETCH REAL DATA FROM BOTS.BUSINESS WEBHOOK ONLY (NO FAKE INCREMENTS)
+      // FETCH REAL DATA FROM BOTS.BUSINESS WEBHOOK (SILENT BACKGROUND SYNC)
       // =========================================================================
       async function fetchRealBalance() {
         triggerHaptic("light");
         refreshSpinner.classList.add("animate-spin-fast");
 
-        statusIndicatorDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
-        statusText.textContent = "Syncing with BJS...";
-        statusText.className = "text-[11px] font-medium text-amber-300";
-
         try {
           const targetUrl = new URL(WEBHOOK_URL);
-          targetUrl.searchParams.set("user_id", userId);
+          targetUrl.searchParams.set("tg_id", userId);
 
           const res = await fetch(targetUrl.toString(), {
             method: "GET",
@@ -274,26 +264,13 @@
 
           if (res.ok) {
             const data = await res.json();
-            if (data && (data.status === "success" || data.balance !== undefined)) {
+            if (data && (data.balance !== undefined || data.status === "success")) {
               balanceDisplay.textContent = Number(data.balance || 0).toLocaleString();
               referralsDisplay.textContent = Number(data.referrals || 0).toLocaleString();
-
-              statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
-              statusText.textContent = "Synced with Bots.business";
-              statusText.className = "text-[11px] font-medium text-emerald-400";
-              showToast("Live data loaded from Bots.business", "🔄");
-            } else {
-              throw new Error("Invalid format from webhook");
             }
-          } else {
-            throw new Error(`HTTP ${res.status}`);
           }
         } catch (err) {
           console.warn("Bots.business Webhook Fetch Error:", err);
-          statusIndicatorDot.className = "w-2 h-2 rounded-full bg-rose-500";
-          statusText.textContent = "Webhook Offline";
-          statusText.className = "text-[11px] font-medium text-rose-300";
-          showToast("Failed to connect to BJS webhook", "⚠️");
         } finally {
           refreshSpinner.classList.remove("animate-spin-fast");
         }
