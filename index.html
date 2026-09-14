@@ -266,12 +266,8 @@
         }
 
         try {
-          const targetUrl = new URL(WEBHOOK_URL);
-          if (userId && userId !== "0") {
-            targetUrl.searchParams.set("user_id", userId);
-          }
-
-          const res = await fetch(targetUrl.toString(), {
+          // Call the exact webhook URL provided by Bots.business without altering searchParams
+          const res = await fetch(WEBHOOK_URL, {
             method: "GET",
             headers: { "Accept": "application/json" }
           });
