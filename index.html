@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Telegram Referral Prototype</title>
+    <meta name="description" content="Telegram Mini App prototype with Firebase Realtime Database for referral counting and live balance updates." />
+    <meta property="og:title" content="Telegram Referral Prototype" />
+    <meta property="og:description" content="Telegram Mini App prototype with Firebase Realtime Database for referral counting and live balance updates." />
+    <meta property="og:type" content="website" />
+
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              telegram: {
+                DEFAULT: '#24A1DE',
+                hover: '#1B86BA',
+                muted: '#18222D'
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Firebase App, Firestore, & Realtime Database (v10 Compat CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <style>
+      /* Smooth transitions and mobile scroll optimizations */
+      body {
+        -webkit-tap-highlight-color: transparent;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+      @keyframes pulseSlow {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.85; transform: scale(1.02); }
+      }
+      .coin-glow {
+        box-shadow: 0 0 25px -5px rgba(234, 179, 8, 0.35);
+      }
+    </style>
+  </head>
+  <body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col justify-between antialiased selection:bg-telegram selection:text-white">
+
+    <!-- Container capped at mobile width -->
+    <div id="app-container" class="w-full max-w-md mx-auto flex-1 flex flex-col justify-between p-4 sm:p-5">
+
+      <!-- TOP SECTION -->
+      <div>
+        <!-- Status & Sync Banner -->
+        <div id="status-bar" class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 mb-4">
+          <div class="flex items-center gap-2">
+            <span id="status-indicator-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            <span id="status-text" class="font-medium text-zinc-300">Checking Firebase...</span>
+          </div>
+          <button id="view-config-guide-btn" class="text-telegram hover:underline text-[11px] font-semibold">
+            Setup Guide
+          </button>
+        </div>
+
+        <!-- USER PROFILE HEADER -->
+        <header id="user-header-card" class="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-4 shadow-lg backdrop-blur mb-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <!-- Avatar Circle -->
+              <div id="user-avatar-badge" class="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-600 to-telegram flex items-center justify-center text-white font-bold text-lg shadow-inner ring-2 ring-zinc-700/50">
+                <span id="user-avatar-letter">U</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <h1 id="user-first-name" class="text-base font-semibold text-zinc-100 tracking-tight">
+                    Telegram User
+                  </h1>
+                  <span id="telegram-verified-badge" class="text-telegram text-xs" title="Telegram Verified">●</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-xs text-zinc-400">
+                  <span>ID:</span>
+                  <span id="user-telegram-id" class="font-mono text-zinc-300 bg-zinc-800/70 px-1.5 py-0.5 rounded">99999999</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Platform / Environment Pill -->
+            <div id="platform-pill" class="text-right">
+              <span id="platform-badge" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-800 text-zinc-400 border border-zinc-700/50">
+                Web Preview
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <!-- STATS & BALANCE SECTION -->
+        <section id="stats-section" class="space-y-3 mb-5">
+          <!-- Main Balance Card -->
+          <div id="balance-card" class="relative overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/80 border border-zinc-800 rounded-3xl p-6 text-center shadow-xl coin-glow">
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-telegram/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <p class="text-xs uppercase tracking-wider font-semibold text-zinc-400 mb-2">Current Balance</p>
+
+            <div class="flex items-center justify-center gap-2 mb-2">
+              <div class="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-black text-sm">
+                ★
+              </div>
+              <span id="current-balance-display" class="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
+                0
+              </span>
+              <span class="text-sm font-semibold text-amber-400 uppercase tracking-wide self-end mb-1">
+                Points
+              </span>
+            </div>
+
+            <p class="text-xs text-zinc-400">
+              Earn <span class="text-emerald-400 font-semibold">+10 Points</span> for each friend who opens your link!
+            </p>
+          </div>
+
+          <!-- Secondary Metric: Total Referrals -->
+          <div id="referrals-card" class="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-300 text-lg">
+                👥
+              </div>
+              <div>
+                <p class="text-xs text-zinc-400 font-medium">Total Referrals</p>
+                <p id="total-referrals-display" class="text-lg font-bold text-zinc-100">
+                  0 <span class="text-xs font-normal text-zinc-400">Friends Invited</span>
+                </p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span id="referral-rate-badge" class="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                +10 pts / friend
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <!-- REFERRAL LINK DISPLAY BOX -->
+        <section id="referral-link-section" class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-medium text-zinc-400">Your Deep Link</label>
+            <span class="text-[10px] text-zinc-500">Auto-generated with your ID</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              id="referral-link-input"
+              readonly
+              class="flex-1 bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs rounded-xl px-3 py-2.5 font-mono focus:outline-none focus:border-telegram select-all"
+              value="Generating link..."
+            />
+            <button
+              id="copy-link-icon-btn"
+              type="button"
+              class="bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 px-3 py-2.5 rounded-xl text-xs font-medium border border-zinc-700 transition"
+              title="Copy deep link"
+            >
+              Copy
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- BOTTOM ACTION BUTTONS -->
+      <div class="space-y-3 pt-2">
+
+        <!-- Primary Button: Invite Friends -->
+        <button
+          id="invite-friends-btn"
+          type="button"
+          class="w-full bg-telegram hover:bg-telegram-hover active:scale-[0.98] text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-telegram/25 flex items-center justify-center gap-2 transition duration-150"
+        >
+          <span class="text-lg">🔗</span>
+          <span class="text-sm uppercase tracking-wider">Invite Friends</span>
+        </button>
+
+        <!-- Test / Simulation Button -->
+        <button
+          id="simulate-referral-btn"
+          type="button"
+          class="w-full bg-zinc-900 hover:bg-zinc-800/90 active:scale-[0.98] text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-500/50 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition duration-150"
+        >
+          <span class="text-base">⚡</span>
+          <span class="text-xs uppercase tracking-wide">Simulate Fake Referral (+10 Balance)</span>
+        </button>
+
+        <!-- Quick Switch ID for Local Browser Testing -->
+        <div id="test-id-toolbar" class="flex items-center justify-between text-[11px] text-zinc-500 px-1 pt-1">
+          <span>Testing in browser?</span>
+          <button id="change-test-id-btn" class="text-zinc-400 hover:text-zinc-200 underline">
+            Change Mock User ID
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- TOAST NOTIFICATION POPUP -->
+    <div
+      id="app-toast"
+      class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-zinc-900 border border-zinc-700 text-zinc-100 text-xs font-medium rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none translate-y-3 flex items-center gap-2"
+    >
+      <span id="toast-icon">✨</span>
+      <span id="toast-message">Notification</span>
+    </div>
+
+    <!-- FIREBASE SETUP GUIDE MODAL (Helps beginners configure keys easily) -->
+    <div
+      id="config-modal"
+      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4"
+    >
+      <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full text-zinc-200 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-white">Firebase & Bot Setup</h3>
+          <button id="close-modal-btn" class="text-zinc-400 hover:text-white text-lg">&times;</button>
+        </div>
+
+        <div class="text-xs space-y-3 text-zinc-300 max-h-80 overflow-y-auto pr-1">
+          <div class="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-xs text-emerald-300 flex items-center gap-2">
+            <span class="text-base">✅</span>
+            <div>
+              <p class="font-semibold text-emerald-200">Firebase Authorized & Connected</p>
+              <p class="text-[11px] text-emerald-400">Project: <code class="font-mono">jovial-facet-307pf</code></p>
+            </div>
+          </div>
+
+          <p class="font-medium text-amber-300">
+            📌 Your Bot & Referral Configuration:
+          </p>
+          <ul class="space-y-1.5 text-zinc-300 text-xs">
+            <li>• <strong>Telegram Bot:</strong> <span class="text-telegram font-mono">@Ebisarfrbot</span></li>
+            <li>• <strong>Deep Link Format:</strong> <code class="bg-zinc-800 px-1 py-0.5 rounded text-amber-300 font-mono text-[10px]">https://t.me/Ebisarfrbot?startapp=USERID</code></li>
+            <li>• <strong>Security Rules:</strong> Deployed and active</li>
+            <li>• <strong>Database Storage:</strong> Real-time synchronization active</li>
+          </ul>
+        </div>
+
+        <button
+          id="got-it-modal-btn"
+          class="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl text-xs transition"
+        >
+          Got it!
+        </button>
+      </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC & FIREBASE INTEGRATION -->
+    <script>
+      /**
+       * =========================================================================
+       * 1. FIREBASE CONFIGURATION
+       * =========================================================================
+       * Connected to provisioned Firebase Project: jovial-facet-307pf
+       */
+      const firebaseConfig = {
+        projectId: "jovial-facet-307pf",
+        appId: "1:10893756797:web:3f406e643d00b1ddd96414",
+        apiKey: "AIzaSyCnBgUnv_1I6viObzzuh-uzb89iSsIIGVc",
+        authDomain: "jovial-facet-307pf.firebaseapp.com",
+        storageBucket: "jovial-facet-307pf.firebasestorage.app",
+        messagingSenderId: "10893756797"
+      };
+
+      /**
+       * =========================================================================
+       * 2. TELEGRAM BOT USERNAME PLACEHOLDER
+       * =========================================================================
+       * Replace with your Telegram Bot username created via @BotFather (without '@').
+       * Example: const BOT_USERNAME = "my_referral_game_bot";
+       */
+      const BOT_USERNAME = "Ebisarfrbot";
+
+      // =========================================================================
+      // 3. APPLICATION STATE & DOM ELEMENTS
+      // =========================================================================
+      let userId = "99999999";
+      let userFirstName = "Tester";
+      let isRealFirebase = false;
+      let rtdb = null;
+      let firestoreDb = null;
+      let unsubscribeFirestore = null;
+
+      // DOM Elements
+      const userFirstNameEl = document.getElementById("user-first-name");
+      const userTelegramIdEl = document.getElementById("user-telegram-id");
+      const userAvatarLetterEl = document.getElementById("user-avatar-letter");
+      const platformBadgeEl = document.getElementById("platform-badge");
+      const currentBalanceEl = document.getElementById("current-balance-display");
+      const totalReferralsEl = document.getElementById("total-referrals-display");
+      const referralLinkInputEl = document.getElementById("referral-link-input");
+      const inviteFriendsBtn = document.getElementById("invite-friends-btn");
+      const copyLinkIconBtn = document.getElementById("copy-link-icon-btn");
+      const simulateReferralBtn = document.getElementById("simulate-referral-btn");
+      const changeTestIdBtn = document.getElementById("change-test-id-btn");
+      const statusIndicatorDot = document.getElementById("status-indicator-dot");
+      const statusText = document.getElementById("status-text");
+      const appToast = document.getElementById("app-toast");
+      const toastMessage = document.getElementById("toast-message");
+      const toastIcon = document.getElementById("toast-icon");
+      const viewConfigGuideBtn = document.getElementById("view-config-guide-btn");
+      const configModal = document.getElementById("config-modal");
+      const closeModalBtn = document.getElementById("close-modal-btn");
+      const gotItModalBtn = document.getElementById("got-it-modal-btn");
+
+      // =========================================================================
+      // 4. TOAST NOTIFICATION HELPER
+      // =========================================================================
+      let toastTimer = null;
+      function showToast(message, icon = "✨") {
+        if (!appToast) return;
+        toastMessage.textContent = message;
+        toastIcon.textContent = icon;
+        appToast.classList.remove("opacity-0", "pointer-events-none", "translate-y-3");
+        appToast.classList.add("opacity-100", "translate-y-0");
+
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          appToast.classList.add("opacity-0", "pointer-events-none", "translate-y-3");
+          appToast.classList.remove("opacity-100", "translate-y-0");
+        }, 3000);
+      }
+
+      // =========================================================================
+      // 5. TELEGRAM WEBAPP INITIALIZATION
+      // =========================================================================
+      function initTelegram() {
+        const tg = window.Telegram?.WebApp;
+        let startParam = null;
+
+        if (tg) {
+          // Notify Telegram that the app is ready and expand to maximum screen height
+          try {
+            tg.ready();
+            tg.expand();
+          } catch (e) {
+            console.warn("Telegram WebApp ready/expand warning:", e);
+          }
+
+          // Check if running inside actual Telegram client
+          if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            userId = String(tg.initDataUnsafe.user.id);
+            userFirstName = tg.initDataUnsafe.user.first_name || "Telegram User";
+            platformBadgeEl.textContent = "Telegram Mini App";
+            platformBadgeEl.classList.remove("text-zinc-400");
+            platformBadgeEl.classList.add("text-telegram", "bg-telegram/10", "border-telegram/30");
+          } else {
+            // Fallback for desktop / standard browser preview
+            platformBadgeEl.textContent = "Browser Preview (Mock)";
+          }
+
+          // Check for start_param (the referrer user ID passed in deep link)
+          if (tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+            startParam = tg.initDataUnsafe.start_param;
+          }
+        }
+
+        // Also check URL parameters for testing referral links directly in the browser
+        // e.g. https://domain.com/?startapp=12345 or ?start_param=12345 or ?ref=12345
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlStartParam = urlParams.get("startapp") || urlParams.get("start_param") || urlParams.get("ref");
+        if (urlStartParam) {
+          startParam = urlStartParam;
+        }
+
+        // Update Header UI
+        userFirstNameEl.textContent = userFirstName;
+        userTelegramIdEl.textContent = userId;
+        userAvatarLetterEl.textContent = (userFirstName[0] || "U").toUpperCase();
+
+        // Generate Deep Link
+        const botName = BOT_USERNAME.trim();
+        const deepLink = `https://t.me/${botName}?startapp=${userId}`;
+        referralLinkInputEl.value = deepLink;
+
+        return { startParam };
+      }
+
+      // =========================================================================
+      // 6. FIREBASE & LOCAL MOCK BACKEND
+      // =========================================================================
+      // In-memory mock store for local preview before user configures keys
+      const localStore = {
+        getUser(id) {
+          const raw = localStorage.getItem(`rtdb_user_${id}`);
+          if (raw) {
+            try { return JSON.parse(raw); } catch (e) {}
+          }
+          return { balance: 0, referrals: 0, firstName: userFirstName };
+        },
+        saveUser(id, data) {
+          localStorage.setItem(`rtdb_user_${id}`, JSON.stringify(data));
+          this.triggerListeners(id);
+        },
+        listeners: {},
+        subscribe(id, callback) {
+          if (!this.listeners[id]) this.listeners[id] = [];
+          this.listeners[id].push(callback);
+          callback(this.getUser(id));
+        },
+        triggerListeners(id) {
+          if (this.listeners[id]) {
+            const data = this.getUser(id);
+            this.listeners[id].forEach(cb => cb(data));
+          }
+        }
+      };
+
+      function initFirebaseBackend() {
+        const isConfigured = firebaseConfig.apiKey &&
+          firebaseConfig.apiKey !== "YOUR_API_KEY" &&
+          firebaseConfig.projectId &&
+          firebaseConfig.projectId !== "YOUR_PROJECT_ID";
+
+        if (isConfigured && window.firebase) {
+          try {
+            // Initialize real Firebase App
+            if (!firebase.apps.length) {
+              firebase.initializeApp(firebaseConfig);
+            }
+
+            // Initialize Firestore
+            firestoreDb = firebase.firestore();
+
+            // Also initialize Realtime Database if databaseURL is present
+            if (firebaseConfig.databaseURL) {
+              try {
+                rtdb = firebase.database();
+              } catch (e) {
+                console.log("RTDB not configured or using Firestore default:", e);
+              }
+            }
+
+            isRealFirebase = true;
+            statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+            statusText.textContent = "Firebase Connected";
+            statusText.className = "font-medium text-emerald-400";
+            console.log("Firebase initialized successfully with project:", firebaseConfig.projectId);
+          } catch (err) {
+            console.warn("Failed to initialize Firebase with current keys. Switching to Local Demo Mode:", err);
+            setupFallbackStatus();
+          }
+        } else {
+          setupFallbackStatus();
+        }
+      }
+
+      function setupFallbackStatus() {
+        isRealFirebase = false;
+        statusIndicatorDot.className = "w-2 h-2 rounded-full bg-amber-400";
+        statusText.textContent = "Demo Mode (Configure Firebase)";
+        statusText.className = "font-medium text-amber-300";
+      }
+
+      // =========================================================================
+      // 7. REALTIME DATABASE / FIRESTORE LISTENER & UI UPDATES
+      // =========================================================================
+      function listenToUserData(currentUserId) {
+        if (unsubscribeFirestore) {
+          unsubscribeFirestore();
+          unsubscribeFirestore = null;
+        }
+
+        if (isRealFirebase && firestoreDb) {
+          // Listen in real-time to users/{userId} in Firestore
+          const userDoc = firestoreDb.collection("users").doc(currentUserId);
+          unsubscribeFirestore = userDoc.onSnapshot((doc) => {
+            if (doc.exists) {
+              const data = doc.data();
+              renderStats(data.balance || 0, data.referrals || 0);
+            } else {
+              // Initialize new user doc with zero balance
+              userDoc.set({
+                userId: currentUserId,
+                firstName: userFirstName,
+                balance: 0,
+                referrals: 0,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+              }, { merge: true }).catch(console.error);
+              renderStats(0, 0);
+            }
+          }, (error) => {
+            console.error("Firebase read error:", error);
+            showToast("Firebase read error: check security rules", "⚠️");
+          });
+        } else if (isRealFirebase && rtdb) {
+          const userRef = rtdb.ref("users/" + currentUserId);
+          userRef.on("value", (snapshot) => {
+            const data = snapshot.val() || { balance: 0, referrals: 0 };
+            renderStats(data.balance || 0, data.referrals || 0);
+          }, (error) => {
+            console.error("Firebase read error:", error);
+            showToast("Firebase read error: check security rules", "⚠️");
+          });
+        } else {
+          // Listen via Local Mock Store
+          localStore.subscribe(currentUserId, (data) => {
+            renderStats(data.balance || 0, data.referrals || 0);
+          });
+        }
+      }
+
+      function renderStats(balance, referrals) {
+        currentBalanceEl.textContent = Number(balance).toLocaleString();
+        totalReferralsEl.innerHTML = `${Number(referrals).toLocaleString()} <span class="text-xs font-normal text-zinc-400">Friends Invited</span>`;
+      }
+
+      // =========================================================================
+      // 8. PROCESS REFERRAL CODE ON STARTUP (start_param)
+      // =========================================================================
+      function processStartupReferral(referrerId, currentUserId) {
+        if (!referrerId) return;
+
+        // Prevent self-referral
+        if (String(referrerId) === String(currentUserId)) {
+          console.log("Self-referral ignored: user cannot invite themselves.");
+          return;
+        }
+
+        console.log(`Processing referral: Referrer = ${referrerId}, New User = ${currentUserId}`);
+
+        if (isRealFirebase && firestoreDb) {
+          const newUserDoc = firestoreDb.collection("users").doc(currentUserId);
+
+          newUserDoc.get().then((doc) => {
+            const userData = doc.exists ? doc.data() : null;
+            if (!userData || !userData.referredBy) {
+              // Mark user as referred
+              newUserDoc.set({
+                userId: currentUserId,
+                firstName: userFirstName,
+                referredBy: referrerId,
+                balance: userData ? (userData.balance || 0) : 0,
+                referrals: userData ? (userData.referrals || 0) : 0,
+                firstSeen: firebase.firestore.FieldValue.serverTimestamp()
+              }, { merge: true });
+
+              // Reward the inviter (+10 balance, +1 referral)
+              const referrerDoc = firestoreDb.collection("users").doc(referrerId);
+              referrerDoc.set({
+                balance: firebase.firestore.FieldValue.increment(10),
+                referrals: firebase.firestore.FieldValue.increment(1),
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+              }, { merge: true });
+
+              showToast(`Referral applied! +10 to inviter #${referrerId}`, "🎁");
+            } else {
+              console.log("User was already referred previously by:", userData.referredBy);
+            }
+          }).catch((err) => {
+            console.error("Error processing referral:", err);
+          });
+
+        } else if (isRealFirebase && rtdb) {
+          const newUserRef = rtdb.ref("users/" + currentUserId);
+
+          // Check if this new user has already been recorded / already claimed a referral
+          newUserRef.once("value").then((snapshot) => {
+            const userData = snapshot.val();
+            if (!userData || !userData.referredBy) {
+              newUserRef.update({
+                referredBy: referrerId,
+                firstSeen: firebase.database.ServerValue.TIMESTAMP,
+                firstName: userFirstName
+              });
+
+              const referrerRef = rtdb.ref("users/" + referrerId);
+              referrerRef.update({
+                balance: firebase.database.ServerValue.increment(10),
+                referrals: firebase.database.ServerValue.increment(1)
+              });
+
+              showToast(`Referral applied! +10 to inviter #${referrerId}`, "🎁");
+            }
+          }).catch((err) => {
+            console.error("Error processing referral:", err);
+          });
+
+        } else {
+          // Local fallback simulation
+          const currentUser = localStore.getUser(currentUserId);
+          if (!currentUser.referredBy) {
+            currentUser.referredBy = referrerId;
+            localStore.saveUser(currentUserId, currentUser);
+
+            // Reward the referrer in local store
+            const referrer = localStore.getUser(referrerId);
+            referrer.balance = (referrer.balance || 0) + 10;
+            referrer.referrals = (referrer.referrals || 0) + 1;
+            localStore.saveUser(referrerId, referrer);
+
+            showToast(`Referral applied! +10 to inviter #${referrerId}`, "🎁");
+          }
+        }
+      }
+
+      // =========================================================================
+      // 9. SIMULATE FAKE REFERRAL (TEST BUTTON)
+      // =========================================================================
+      function simulateFakeReferral() {
+        // Trigger Telegram haptic feedback if running inside Telegram WebApp
+        if (window.Telegram?.WebApp?.HapticFeedback) {
+          try {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred("medium");
+          } catch (e) {}
+        }
+
+        if (isRealFirebase && firestoreDb) {
+          const userDoc = firestoreDb.collection("users").doc(userId);
+          userDoc.set({
+            balance: firebase.firestore.FieldValue.increment(10),
+            referrals: firebase.firestore.FieldValue.increment(1),
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true }).then(() => {
+            showToast("Simulated referral! +10 Points added", "⚡");
+          }).catch((err) => {
+            console.error("Database update error:", err);
+            showToast("Update failed: " + err.message, "❌");
+          });
+        } else if (isRealFirebase && rtdb) {
+          const userRef = rtdb.ref("users/" + userId);
+          userRef.update({
+            balance: firebase.database.ServerValue.increment(10),
+            referrals: firebase.database.ServerValue.increment(1),
+            lastUpdated: firebase.database.ServerValue.TIMESTAMP
+          }).then(() => {
+            showToast("Simulated referral! +10 Points added", "⚡");
+          }).catch((err) => {
+            console.error("Database update error:", err);
+            showToast("Update failed: " + err.message, "❌");
+          });
+        } else {
+          // Local Mock Increment
+          const current = localStore.getUser(userId);
+          current.balance = (current.balance || 0) + 10;
+          current.referrals = (current.referrals || 0) + 1;
+          localStore.saveUser(userId, current);
+
+          showToast("Simulated referral! +10 Points added (Demo)", "⚡");
+        }
+      }
+
+      // =========================================================================
+      // 10. INVITE FRIENDS & CLIPBOARD COPY
+      // =========================================================================
+      function copyReferralLink() {
+        const link = referralLinkInputEl.value;
+
+        // Copy link to clipboard
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link).then(onCopiedSuccess).catch(fallbackCopy);
+        } else {
+          fallbackCopy();
+        }
+
+        function fallbackCopy() {
+          referralLinkInputEl.select();
+          document.execCommand("copy");
+          onCopiedSuccess();
+        }
+
+        function onCopiedSuccess() {
+          // Trigger Telegram Haptic Feedback
+          if (window.Telegram?.WebApp?.HapticFeedback) {
+            try {
+              window.Telegram.WebApp.HapticFeedback.notificationOccurred("success");
+            } catch (e) {}
+          }
+
+          showToast("Referral deep link copied!", "📋");
+
+          // Visual feedback on copy button
+          const originalText = copyLinkIconBtn.textContent;
+          copyLinkIconBtn.textContent = "Copied!";
+          copyLinkIconBtn.classList.add("bg-emerald-600", "text-white");
+          setTimeout(() => {
+            copyLinkIconBtn.textContent = originalText;
+            copyLinkIconBtn.classList.remove("bg-emerald-600", "text-white");
+          }, 1500);
+
+          // If inside Telegram WebApp, offer to open Telegram share link
+          const tg = window.Telegram?.WebApp;
+          if (tg && typeof tg.openTelegramLink === "function") {
+            const shareText = encodeURIComponent("Join me on this mini app and get bonus points!");
+            const shareUrl = encodeURIComponent(link);
+            const tgShareLink = `https://t.me/share/url?url=${shareUrl}&text=${shareText}`;
+
+            // Optional: User can share directly via Telegram dialog
+            setTimeout(() => {
+              if (confirm("Link copied! Do you want to share it directly to your Telegram chats?")) {
+                tg.openTelegramLink(tgShareLink);
+              }
+            }, 250);
+          }
+        }
+      }
+
+      // =========================================================================
+      // 11. EVENT LISTENERS & SETUP
+      // =========================================================================
+      inviteFriendsBtn.addEventListener("click", copyReferralLink);
+      copyLinkIconBtn.addEventListener("click", copyReferralLink);
+      simulateReferralBtn.addEventListener("click", simulateFakeReferral);
+
+      // Setup Guide Modal handlers
+      viewConfigGuideBtn.addEventListener("click", () => {
+        configModal.classList.remove("hidden");
+        configModal.classList.add("flex");
+      });
+      closeModalBtn.addEventListener("click", () => {
+        configModal.classList.add("hidden");
+        configModal.classList.remove("flex");
+      });
+      gotItModalBtn.addEventListener("click", () => {
+        configModal.classList.add("hidden");
+        configModal.classList.remove("flex");
+      });
+
+      // Browser test helper: Switch mock user ID to test multi-user scenarios
+      changeTestIdBtn.addEventListener("click", () => {
+        const newId = prompt("Enter a Mock Telegram User ID to test with:", userId);
+        if (newId && newId.trim()) {
+          userId = newId.trim();
+          userTelegramIdEl.textContent = userId;
+          referralLinkInputEl.value = `https://t.me/${BOT_USERNAME.trim()}?startapp=${userId}`;
+          listenToUserData(userId);
+          showToast(`Switched to mock User #${userId}`, "👤");
+        }
+      });
+
+      // =========================================================================
+      // 12. RUN INITIALIZATION ON PAGE LOAD
+      // =========================================================================
+      window.addEventListener("DOMContentLoaded", () => {
+        // Step 1: Initialize Telegram SDK & read identity
+        const { startParam } = initTelegram();
+
+        // Step 2: Initialize Firebase Realtime Database
+        initFirebaseBackend();
+
+        // Step 3: Listen to real-time changes for this user
+        listenToUserData(userId);
+
+        // Step 4: If opened with a referral code, process it
+        if (startParam) {
+          processStartupReferral(startParam, userId);
+        }
+      });
+    </script>
+  </body>
+</html>
+
+

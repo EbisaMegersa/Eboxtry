@@ -1,0 +1,6 @@
+{
+  "name": "Telegram Referral Prototype",
+  "description": "Telegram Mini App prototype with Firebase Realtime Database for referral counting and live balance updates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
