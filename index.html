@@ -401,6 +401,8 @@
       // BOT & API CONFIGURATION
       // =========================================================================
       const BOT_USERNAME = "Ebisarfrbot";
+      const BOT_ID = "2992688";
+      const BOTS_API_KEY = "vfwp3iz7xURnmeCX5PqKipvxkqdRZBCC6c0_9tn7";
       const WEBHOOK_BASE = "https://api.bots.business/v1/bots/2992688/new-webhook?command=%2Fapi_getBalance&public_user_token=30f946846808ad74d9d9d48ebcc68110";
 
       let userId = "0";
@@ -525,7 +527,7 @@
 
         try {
           // Construct target webhook URL dynamically for this specific user ID
-          const requestUrl = `${WEBHOOK_BASE}&user_id=${encodeURIComponent(userId)}`;
+          const requestUrl = `${WEBHOOK_BASE}&user_id=${encodeURIComponent(userId)}&api_key=${encodeURIComponent(BOTS_API_KEY)}`;
 
           const res = await fetch(requestUrl, {
             method: "GET",
