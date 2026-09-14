@@ -1,18 +1,12 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Telegram Referral Prototype</title>
-    <meta name="description" content="Telegram Mini App prototype with Firebase Realtime Database for referral counting and live balance updates." />
-    <meta property="og:title" content="Telegram Referral Prototype" />
-    <meta property="og:description" content="Telegram Mini App prototype with Firebase Realtime Database for referral counting and live balance updates." />
-    <meta property="og:type" content="website" />
-
+    <title>Telegram Mini App - Bots.business Sync</title>
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-    <!-- Tailwind CSS via CDN -->
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -20,1092 +14,559 @@
         theme: {
           extend: {
             colors: {
-              telegram: {
-                DEFAULT: '#24A1DE',
-                hover: '#1B86BA',
-                muted: '#18222D'
-              }
+              telegram: '#24A1DE',
+              'telegram-hover': '#1C82B5',
+              darkBg: '#090D16',
+              cardBg: '#131B2E',
+              cardBorder: '#1E293B',
+              accentGold: '#F59E0B',
+              accentEmerald: '#10B981',
             }
           }
         }
       }
     </script>
-
-    <!-- Firebase App, Firestore, & Realtime Database (v10 Compat CDN) -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-
     <style>
-      /* Smooth transitions and mobile scroll optimizations */
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
       body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #090D16;
+        color: #F8FAFC;
+        user-select: none;
         -webkit-tap-highlight-color: transparent;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       }
-      @keyframes pulseSlow {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.85; transform: scale(1.02); }
+      .animate-spin-fast {
+        animation: spin 0.6s linear infinite;
       }
-      .coin-glow {
-        box-shadow: 0 0 25px -5px rgba(234, 179, 8, 0.35);
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .glow-gold {
+        box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25);
+      }
+      .glow-telegram {
+        box-shadow: 0 0 25px -5px rgba(36, 161, 222, 0.3);
       }
     </style>
   </head>
-  <body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col justify-between antialiased selection:bg-telegram selection:text-white">
+  <body class="min-h-screen pb-12 flex flex-col justify-between antialiased selection:bg-telegram selection:text-white">
 
-    <!-- Container capped at mobile width -->
-    <div id="app-container" class="w-full max-w-md mx-auto flex-1 flex flex-col justify-between p-4 sm:p-5">
+    <!-- Toast Notification Overlay -->
+    <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 transform -translate-y-16 opacity-0 transition-all duration-300 pointer-events-none">
+      <div class="bg-slate-800/95 border border-slate-700/80 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold">
+        <span id="toastIcon">✨</span>
+        <span id="toastMessage">Action completed!</span>
+      </div>
+    </div>
 
-      <!-- TOP SECTION -->
-      <div>
-        <!-- Status & Sync Banner -->
-        <div id="status-bar" class="flex items-center justify-between gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 mb-4">
-          <div class="flex items-center gap-2">
-            <span id="status-indicator-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-            <span id="status-text" class="font-medium text-zinc-300">Checking Firebase...</span>
+    <div class="max-w-md mx-auto w-full px-4 pt-5 space-y-5">
+
+      <!-- HEADER: PROFILE & STATUS -->
+      <header class="flex items-center justify-between bg-cardBg/80 backdrop-blur-md p-3.5 rounded-2xl border border-cardBorder">
+        <div class="flex items-center gap-3">
+          <div id="userAvatar" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-telegram to-blue-600 flex items-center justify-center text-white font-bold text-base shadow-md">
+            U
           </div>
-          <button id="view-config-guide-btn" class="text-telegram hover:underline text-[11px] font-semibold">
-            Setup Guide
-          </button>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <h1 id="userFirstName" class="font-bold text-sm text-slate-100">Telegram User</h1>
+              <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono">#<span id="userTelegramId">123456</span></span>
+            </div>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span id="statusIndicatorDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span id="statusText" class="text-[11px] font-medium text-amber-300">Demo Mode</span>
+            </div>
+          </div>
         </div>
 
-        <!-- USER PROFILE HEADER -->
-        <header id="user-header-card" class="bg-zinc-900/90 border border-zinc-800/80 rounded-2xl p-4 shadow-lg backdrop-blur mb-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <!-- Avatar Circle -->
-              <div id="user-avatar-badge" class="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-600 to-telegram flex items-center justify-center text-white font-bold text-lg shadow-inner ring-2 ring-zinc-700/50">
-                <span id="user-avatar-letter">U</span>
-              </div>
-              <div>
-                <div class="flex items-center gap-1.5">
-                  <h1 id="user-first-name" class="text-base font-semibold text-zinc-100 tracking-tight">
-                    Telegram User
-                  </h1>
-                  <span id="telegram-verified-badge" class="text-telegram text-xs" title="Telegram Verified">●</span>
-                </div>
-                <div class="flex items-center gap-1.5 text-xs text-zinc-400">
-                  <span>ID:</span>
-                  <span id="user-telegram-id" class="font-mono text-zinc-300 bg-zinc-800/70 px-1.5 py-0.5 rounded">99999999</span>
-                </div>
-              </div>
-            </div>
+        <button id="openConfigModalBtn" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700/50" title="BJS Webhook Setup">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </button>
+      </header>
 
-            <!-- Platform / Environment Pill -->
-            <div id="platform-pill" class="text-right">
-              <span id="platform-badge" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-800 text-zinc-400 border border-zinc-700/50">
-                Web Preview
-              </span>
-            </div>
-          </div>
-        </header>
+      <!-- MAIN BALANCE CARD -->
+      <div class="relative overflow-hidden bg-gradient-to-b from-cardBg to-slate-900/90 rounded-3xl p-6 border border-cardBorder glow-gold">
+        <!-- Glow accents -->
+        <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
+        <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-telegram/10 rounded-full blur-2xl"></div>
 
-        <!-- STATS & BALANCE SECTION -->
-        <section id="stats-section" class="space-y-3 mb-5">
-          <!-- Main Balance Card -->
-          <div id="balance-card" class="relative overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/80 border border-zinc-800 rounded-3xl p-6 text-center shadow-xl coin-glow">
-            <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
-            <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-telegram/10 rounded-full blur-2xl pointer-events-none"></div>
-
-            <p class="text-xs uppercase tracking-wider font-semibold text-zinc-400 mb-2">Current Balance</p>
-
-            <div class="flex items-center justify-center gap-2 mb-2">
-              <div class="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-black text-sm">
-                ★
-              </div>
-              <span id="current-balance-display" class="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-                0
-              </span>
-              <span class="text-sm font-semibold text-amber-400 uppercase tracking-wide self-end mb-1">
-                Points
-              </span>
-            </div>
-
-            <p class="text-xs text-zinc-400">
-              Earn <span class="text-emerald-400 font-semibold">+10 Points</span> for each friend who opens your link!
-            </p>
-          </div>
-
-          <!-- Secondary Metric: Total Referrals -->
-          <div id="referrals-card" class="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-300 text-lg">
-                👥
-              </div>
-              <div>
-                <p class="text-xs text-zinc-400 font-medium">Total Referrals</p>
-                <p id="total-referrals-display" class="text-lg font-bold text-zinc-100">
-                  0 <span class="text-xs font-normal text-zinc-400">Friends Invited</span>
-                </p>
-              </div>
-            </div>
-            <div class="text-right">
-              <span id="referral-rate-badge" class="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                +10 pts / friend
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <!-- REFERRAL LINK DISPLAY BOX -->
-        <section id="referral-link-section" class="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 mb-4">
-          <div class="flex items-center justify-between mb-2">
-            <label class="text-xs font-medium text-zinc-400">Your Referral Deep Link</label>
-            <span class="text-[10px] text-emerald-400 font-semibold">+10 pts per friend</span>
-          </div>
-
-          <!-- Link Format Selector Tabs -->
-          <div class="grid grid-cols-2 gap-1.5 p-1 bg-zinc-950/80 rounded-xl mb-2.5 border border-zinc-850">
-            <button
-              id="link-mode-startapp"
-              type="button"
-              class="py-1.5 text-[11px] font-semibold rounded-lg transition bg-telegram text-white shadow-sm"
-              title="Recommended for Mini Apps"
-            >
-              Direct Mini App (?startapp)
-            </button>
-            <button
-              id="link-mode-start"
-              type="button"
-              class="py-1.5 text-[11px] font-medium rounded-lg text-zinc-400 hover:text-zinc-200 transition"
-              title="Standard bot /start link"
-            >
-              Bot Chat (?start)
-            </button>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <input
-              type="text"
-              id="referral-link-input"
-              readonly
-              class="flex-1 bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs rounded-xl px-3 py-2.5 font-mono focus:outline-none focus:border-telegram select-all"
-              value="Generating link..."
-            />
-            <button
-              id="copy-link-icon-btn"
-              type="button"
-              class="bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 px-3.5 py-2.5 rounded-xl text-xs font-medium border border-zinc-700 transition"
-              title="Copy deep link"
-            >
-              Copy
-            </button>
-          </div>
-          <p id="link-hint-text" class="text-[10px] text-zinc-500 mt-2">
-            Opens your Mini App directly and gives +10 points to both accounts.
-          </p>
-        </section>
-
-        <!-- ACTIVE REFERRAL WELCOME BANNER (Shown if user arrived via an invite link) -->
-        <div id="referral-welcome-banner" class="hidden mb-4 p-3.5 bg-emerald-950/40 border border-emerald-500/40 rounded-2xl flex items-center justify-between text-xs">
-          <div class="flex items-center gap-2.5">
-            <span class="text-xl">🎁</span>
-            <div>
-              <p class="font-semibold text-emerald-300">Invited by Friend #<span id="banner-referrer-id" class="font-mono font-bold">---</span></p>
-              <p id="banner-status-text" class="text-[11px] text-emerald-400/90 font-mono mt-0.5">Processing +10 points reward...</p>
-            </div>
-          </div>
-          <span id="banner-points-badge" class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold text-[11px]">+10 PTS</span>
-        </div>
-
-        <!-- ENTER INVITE CODE CARD (Allows users who opened via ?start or plain bot to enter their referrer's ID directly) -->
-        <div id="manual-referral-box" class="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-3 mb-4">
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-[11px] font-semibold text-zinc-300 flex items-center gap-1.5">
-              <span>🎟️</span> Have a friend's referral ID?
+        <div class="relative z-10 space-y-4">
+          <div class="flex justify-between items-center text-xs text-slate-400 font-medium">
+            <span class="flex items-center gap-1.5 uppercase tracking-wider text-[10px] text-amber-400/90 font-bold">
+              <svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+              </svg>
+              Bots.business Balance
             </span>
-            <span id="manual-ref-status" class="text-[10px] text-zinc-500">Unclaimed</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <input
-              type="text"
-              id="manual-referrer-input"
-              placeholder="Enter Friend's Telegram ID (e.g. 12345678)"
-              class="flex-1 bg-zinc-950 border border-zinc-800 text-zinc-200 text-xs rounded-xl px-3 py-2 font-mono focus:outline-none focus:border-telegram placeholder:text-zinc-600"
-            />
-            <button
-              id="apply-referral-btn"
-              type="button"
-              class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1"
-            >
-              <span>Claim</span>
+            <button id="refreshBalanceBtn" class="flex items-center gap-1 text-xs text-telegram hover:text-cyan-400 transition font-semibold bg-telegram/10 hover:bg-telegram/20 px-2.5 py-1 rounded-lg border border-telegram/20">
+              <svg id="refreshSpinner" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              <span>Refresh</span>
             </button>
           </div>
-          <p class="text-[10px] text-zinc-500 mt-1.5">
-            Gives +10 Points to you and your friend instantly.
-          </p>
+
+          <div class="flex items-baseline gap-2">
+            <span id="balanceDisplay" class="text-4xl sm:text-5xl font-black text-white tracking-tight">0</span>
+            <span class="text-sm font-bold text-amber-400 uppercase tracking-wider">Points</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800/80">
+            <div class="bg-slate-800/40 p-3 rounded-2xl border border-slate-800/60">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Referrals</span>
+              <span id="referralsDisplay" class="text-xl font-extrabold text-slate-100 mt-0.5 block">0</span>
+            </div>
+            <div class="bg-slate-800/40 p-3 rounded-2xl border border-slate-800/60">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reward Tier</span>
+              <span id="tierDisplay" class="text-sm font-bold text-emerald-400 mt-1 block flex items-center gap-1">
+                <span>🌟</span> Standard
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- BOTTOM ACTION BUTTONS -->
-      <div class="space-y-2.5 pt-2">
+      <!-- REFERRAL LINK & INVITATION SECTION -->
+      <div class="bg-cardBg/90 rounded-3xl p-5 border border-cardBorder space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              <svg class="w-4 h-4 text-telegram" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+              Invite Friends & Earn
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Earn <strong class="text-amber-400">+10 points</strong> stored in BJS for every friend who starts the bot!</p>
+          </div>
+        </div>
 
-        <!-- Primary Button: Share Directly via Telegram -->
-        <button
-          id="invite-friends-btn"
-          type="button"
-          class="w-full bg-telegram hover:bg-telegram-hover active:scale-[0.98] text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-telegram/25 flex items-center justify-center gap-2 transition duration-150"
-        >
-          <span class="text-lg">✈️</span>
-          <span class="text-sm uppercase tracking-wider">Share via Telegram Chat</span>
-        </button>
+        <!-- Generated Referral Link Input Box -->
+        <div class="space-y-2">
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Your Personal Referral Link</label>
+          <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 pl-3 rounded-2xl border border-slate-800">
+            <input id="referralLinkInput" type="text" readonly class="bg-transparent text-xs text-slate-300 font-mono w-full focus:outline-none" value="https://t.me/MyBot?start=ref_123456" />
+            <button id="copyLinkBtn" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs px-3 py-2 rounded-xl border border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap active:scale-95">
+              <svg class="w-3.5 h-3.5 text-telegram" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              </svg>
+              <span>Copy</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- Secondary Button: Copy Referral Link -->
-        <button
-          id="copy-full-link-btn"
-          type="button"
-          class="w-full bg-zinc-900 hover:bg-zinc-800/90 active:scale-[0.98] text-zinc-200 border border-zinc-750 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition duration-150 text-xs uppercase tracking-wide"
-        >
-          <span>📋</span>
-          <span>Copy Invite Link</span>
-        </button>
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-2 gap-2.5 pt-1">
+          <button id="inviteFriendsBtn" class="w-full bg-telegram hover:bg-telegram-hover text-white font-bold text-xs py-3 px-4 rounded-2xl shadow-lg glow-telegram transition flex items-center justify-center gap-2 active:scale-98">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.96 1.25-5.54 3.67-.52.36-1 .54-1.42.53-.47-.01-1.37-.26-2.04-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 3.99-1.74 6.66-2.89 8.01-3.45 3.81-1.59 4.6-1.87 5.12-1.88.11 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.21-.04.35z"/>
+            </svg>
+            <span>Invite Friends</span>
+          </button>
 
-        <!-- Test / Simulation Button -->
-        <button
-          id="simulate-referral-btn"
-          type="button"
-          class="w-full bg-zinc-950 hover:bg-zinc-900 active:scale-[0.98] text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-500/50 font-medium py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition duration-150"
-        >
-          <span class="text-sm">⚡</span>
-          <span class="text-[11px] uppercase tracking-wide">Test Referral (+10 Points Self-Test)</span>
-        </button>
-
-        <!-- Quick Switch ID for Local Browser Testing -->
-        <div id="test-id-toolbar" class="flex items-center justify-between text-[11px] text-zinc-500 px-1 pt-1">
-          <span>Testing accounts in browser?</span>
-          <button id="change-test-id-btn" class="text-zinc-400 hover:text-zinc-200 underline">
-            Switch Mock Account ID
+          <button id="claimRewardBtn" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs py-3 px-4 rounded-2xl border border-amber-500/30 hover:border-amber-500/60 transition flex items-center justify-center gap-1.5 active:scale-98">
+            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5a2 2 0 10-2 2h2zm0 13C10.832 21 2 13.5 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 5-8.832 12.5-10 12.5z"></path>
+            </svg>
+            <span>Daily Bonus</span>
           </button>
         </div>
-
       </div>
 
-    </div>
+      <!-- DEV & CONFIG MODAL -->
+      <div id="configModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex-col justify-end sm:justify-center p-4">
+        <div class="bg-cardBg border border-cardBorder rounded-3xl max-w-md w-full p-6 space-y-5 mx-auto max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-telegram/20 text-telegram">⚙️</span>
+              Bots.business API Settings
+            </h3>
+            <button id="closeConfigModalBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
 
-    <!-- TOAST NOTIFICATION POPUP -->
-    <div
-      id="app-toast"
-      class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-zinc-900 border border-zinc-700 text-zinc-100 text-xs font-medium rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none translate-y-3 flex items-center gap-2"
-    >
-      <span id="toast-icon">✨</span>
-      <span id="toast-message">Notification</span>
-    </div>
-
-    <!-- FIREBASE SETUP GUIDE MODAL (Helps beginners configure keys easily) -->
-    <div
-      id="config-modal"
-      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4"
-    >
-      <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full text-zinc-200 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-bold text-white">Firebase & Bot Setup</h3>
-          <button id="close-modal-btn" class="text-zinc-400 hover:text-white text-lg">&times;</button>
-        </div>
-
-        <div class="text-xs space-y-3 text-zinc-300 max-h-80 overflow-y-auto pr-1">
-          <div class="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-xs text-emerald-300 flex items-center gap-2">
-            <span class="text-base">✅</span>
+          <div class="space-y-4 text-xs">
             <div>
-              <p class="font-semibold text-emerald-200">Firebase Authorized & Connected</p>
-              <p class="text-[11px] text-emerald-400">Project: <code class="font-mono">jovial-facet-307pf</code></p>
+              <label class="font-semibold text-slate-300 block mb-1">Bot Username (without @)</label>
+              <input id="cfgBotUsername" type="text" placeholder="e.g. MySuperReferralBot" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 focus:outline-none focus:border-telegram" />
+            </div>
+
+            <div>
+              <label class="font-semibold text-slate-300 block mb-1">Bots.business Webhook URL</label>
+              <input id="cfgWebhookUrl" type="url" placeholder="https://api.bots.business/v1/bots/YOUR_BOT_ID/webhooks/YOUR_KEY" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-mono text-[11px] focus:outline-none focus:border-telegram" />
+              <p class="text-[10px] text-slate-400 mt-1">Get this webhook endpoint inside your Bots.business bot under Webhooks settings.</p>
+            </div>
+
+            <div class="bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+              <span class="font-bold text-amber-400 text-[11px] block">Webhook Test & Status</span>
+              <p class="text-slate-400 text-[11px]">When configured, requests will be dispatched directly to your BJS webhook command (`/api_action` or `/api_getBalance`).</p>
+              <button id="testWebhookBtn" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2 rounded-xl border border-slate-700 transition">
+                Test Connection to Webhook
+              </button>
             </div>
           </div>
 
-          <p class="font-medium text-amber-300">
-            📌 Your Bot & Referral Configuration:
-          </p>
-          <ul class="space-y-1.5 text-zinc-300 text-xs">
-            <li>• <strong>Telegram Bot:</strong> <span class="text-telegram font-mono">@Ebisarfrbot</span></li>
-            <li>• <strong>Deep Link Format:</strong> <code class="bg-zinc-800 px-1 py-0.5 rounded text-amber-300 font-mono text-[10px]">https://t.me/Ebisarfrbot?startapp=USERID</code></li>
-            <li>• <strong>Security Rules:</strong> Deployed and active</li>
-            <li>• <strong>Database Storage:</strong> Real-time synchronization active</li>
-          </ul>
+          <div class="flex gap-2 pt-2">
+            <button id="saveConfigBtn" class="w-full bg-telegram hover:bg-telegram-hover text-white font-bold py-2.5 rounded-xl transition">
+              Save Settings
+            </button>
+          </div>
         </div>
-
-        <button
-          id="got-it-modal-btn"
-          class="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-xl text-xs transition"
-        >
-          Got it!
-        </button>
       </div>
+
     </div>
 
-    <!-- JAVASCRIPT LOGIC & FIREBASE INTEGRATION -->
+    <!-- MINI APP LOGIC SCRIPT -->
     <script>
-      /**
-       * =========================================================================
-       * 1. FIREBASE CONFIGURATION
-       * =========================================================================
-       * Connected to provisioned Firebase Project: jovial-facet-307pf
-       */
-      const firebaseConfig = {
-        projectId: "jovial-facet-307pf",
-        appId: "1:10893756797:web:3f406e643d00b1ddd96414",
-        apiKey: "AIzaSyCnBgUnv_1I6viObzzuh-uzb89iSsIIGVc",
-        authDomain: "jovial-facet-307pf.firebaseapp.com",
-        firestoreDatabaseId: "ai-studio-telegramreferral-3d7511eb-c5cb-4b25-84a9-96579f9f30b6",
-        storageBucket: "jovial-facet-307pf.firebasestorage.app",
-        messagingSenderId: "10893756797"
+      // =========================================================================
+      // 1. CONFIGURATION & STATE
+      // =========================================================================
+      const DEFAULT_BOT_USERNAME = "MyAwesomeReferralBot";
+      const DEFAULT_WEBHOOK_URL = "https://api.bots.business/v1/bots/YOUR_BOT_ID/webhooks/YOUR_API_KEY";
+
+      let botUsername = localStorage.getItem("bjs_bot_username") || DEFAULT_BOT_USERNAME;
+      let webhookUrl = localStorage.getItem("bjs_webhook_url") || DEFAULT_WEBHOOK_URL;
+
+      let userId = "77788899";
+      let userFirstName = "Alex";
+      let isBjsConnected = false;
+
+      // Local Fallback Store for smooth preview when webhook is not set up
+      const mockStore = {
+        getBalance(id) {
+          const val = localStorage.getItem("mock_bal_" + id);
+          return val ? parseInt(val, 10) : 50;
+        },
+        setBalance(id, val) {
+          localStorage.setItem("mock_bal_" + id, val);
+        },
+        getReferrals(id) {
+          const val = localStorage.getItem("mock_ref_" + id);
+          return val ? parseInt(val, 10) : 3;
+        },
+        setReferrals(id, val) {
+          localStorage.setItem("mock_ref_" + id, val);
+        }
       };
 
-      /**
-       * =========================================================================
-       * 2. TELEGRAM BOT USERNAME PLACEHOLDER
-       * =========================================================================
-       * Replace with your Telegram Bot username created via @BotFather (without '@').
-       * Example: const BOT_USERNAME = "my_referral_game_bot";
-       */
-      const BOT_USERNAME = "Ebisarfrbot";
-
-      // =========================================================================
-      // 3. APPLICATION STATE & DOM ELEMENTS
-      // =========================================================================
-      let userId = "99999999";
-      let userFirstName = "Tester";
-      let isRealFirebase = false;
-      let rtdb = null;
-      let firestoreDb = null;
-      let unsubscribeFirestore = null;
-
-      let activeLinkMode = "startapp"; // 'startapp' or 'start'
-
       // DOM Elements
-      const userFirstNameEl = document.getElementById("user-first-name");
-      const userTelegramIdEl = document.getElementById("user-telegram-id");
-      const userAvatarLetterEl = document.getElementById("user-avatar-letter");
-      const platformBadgeEl = document.getElementById("platform-badge");
-      const currentBalanceEl = document.getElementById("current-balance-display");
-      const totalReferralsEl = document.getElementById("total-referrals-display");
-      const referralLinkInputEl = document.getElementById("referral-link-input");
-      const inviteFriendsBtn = document.getElementById("invite-friends-btn");
-      const copyFullLinkBtn = document.getElementById("copy-full-link-btn");
-      const copyLinkIconBtn = document.getElementById("copy-link-icon-btn");
-      const simulateReferralBtn = document.getElementById("simulate-referral-btn");
-      const changeTestIdBtn = document.getElementById("change-test-id-btn");
-      const referralWelcomeBanner = document.getElementById("referral-welcome-banner");
-      const bannerReferrerIdEl = document.getElementById("banner-referrer-id");
-      const bannerStatusTextEl = document.getElementById("banner-status-text");
-      const manualReferrerInput = document.getElementById("manual-referrer-input");
-      const applyReferralBtn = document.getElementById("apply-referral-btn");
-      const manualRefStatus = document.getElementById("manual-ref-status");
-      const linkModeStartappBtn = document.getElementById("link-mode-startapp");
-      const linkModeStartBtn = document.getElementById("link-mode-start");
-      const linkHintText = document.getElementById("link-hint-text");
-      const statusIndicatorDot = document.getElementById("status-indicator-dot");
-      const statusText = document.getElementById("status-text");
-      const appToast = document.getElementById("app-toast");
-      const toastMessage = document.getElementById("toast-message");
-      const toastIcon = document.getElementById("toast-icon");
-      const viewConfigGuideBtn = document.getElementById("view-config-guide-btn");
-      const configModal = document.getElementById("config-modal");
-      const closeModalBtn = document.getElementById("close-modal-btn");
-      const gotItModalBtn = document.getElementById("got-it-modal-btn");
+      const userAvatarEl = document.getElementById("userAvatar");
+      const userFirstNameEl = document.getElementById("userFirstName");
+      const userTelegramIdEl = document.getElementById("userTelegramId");
+      const statusIndicatorDot = document.getElementById("statusIndicatorDot");
+      const statusText = document.getElementById("statusText");
+
+      const balanceDisplay = document.getElementById("balanceDisplay");
+      const referralsDisplay = document.getElementById("referralsDisplay");
+      const refreshBalanceBtn = document.getElementById("refreshBalanceBtn");
+      const refreshSpinner = document.getElementById("refreshSpinner");
+
+      const referralLinkInput = document.getElementById("referralLinkInput");
+      const copyLinkBtn = document.getElementById("copyLinkBtn");
+      const inviteFriendsBtn = document.getElementById("inviteFriendsBtn");
+      const claimRewardBtn = document.getElementById("claimRewardBtn");
+
+      const openConfigModalBtn = document.getElementById("openConfigModalBtn");
+      const closeConfigModalBtn = document.getElementById("closeConfigModalBtn");
+      const configModal = document.getElementById("configModal");
+      const cfgBotUsername = document.getElementById("cfgBotUsername");
+      const cfgWebhookUrl = document.getElementById("cfgWebhookUrl");
+      const saveConfigBtn = document.getElementById("saveConfigBtn");
+      const testWebhookBtn = document.getElementById("testWebhookBtn");
 
       // =========================================================================
-      // 4. TOAST NOTIFICATION HELPER
+      // 2. TELEGRAM WEBAPP SDK INITIALIZATION & HAPTICS
       // =========================================================================
-      let toastTimer = null;
-      function showToast(message, icon = "✨") {
-        if (!appToast) return;
-        toastMessage.textContent = message;
-        toastIcon.textContent = icon;
-        appToast.classList.remove("opacity-0", "pointer-events-none", "translate-y-3");
-        appToast.classList.add("opacity-100", "translate-y-0");
-
-        if (toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => {
-          appToast.classList.add("opacity-0", "pointer-events-none", "translate-y-3");
-          appToast.classList.remove("opacity-100", "translate-y-0");
-        }, 3000);
-      }
-
-      function updateReferralLinkInput() {
-        const botName = BOT_USERNAME.trim();
-        if (activeLinkMode === "start") {
-          referralLinkInputEl.value = `https://t.me/${botName}?start=${userId}`;
-          if (linkHintText) {
-            linkHintText.textContent = "Sends /start to your bot. If your bot has a Web App button or /start handler, it triggers.";
-          }
-        } else {
-          referralLinkInputEl.value = `https://t.me/${botName}?startapp=${userId}`;
-          if (linkHintText) {
-            linkHintText.textContent = "Launches your Mini App directly in Telegram and credits your account instantly.";
-          }
-        }
-      }
-
-      // =========================================================================
-      // 5. TELEGRAM WEBAPP INITIALIZATION
-      // =========================================================================
-      function initTelegram() {
+      function initTelegramApp() {
         const tg = window.Telegram?.WebApp;
-        let startParam = null;
-
         if (tg) {
           try {
             tg.ready();
             tg.expand();
-          } catch (e) {
-            console.warn("Telegram WebApp ready/expand warning:", e);
-          }
+            tg.headerColor = "#090D16";
+            tg.backgroundColor = "#090D16";
 
-          // Check if running inside actual Telegram client
-          if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            userId = String(tg.initDataUnsafe.user.id);
-            userFirstName = tg.initDataUnsafe.user.first_name || "Telegram User";
-            platformBadgeEl.textContent = "Telegram Mini App";
-            platformBadgeEl.classList.remove("text-zinc-400");
-            platformBadgeEl.classList.add("text-telegram", "bg-telegram/10", "border-telegram/30");
-          } else {
-            platformBadgeEl.textContent = "Browser Preview (Mock)";
-          }
-
-          // Check for start_param (the referrer user ID passed in deep link)
-          if (tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
-            startParam = String(tg.initDataUnsafe.start_param).trim();
-            console.log("[Telegram] Detected start_param from initDataUnsafe:", startParam);
-          }
-        }
-
-        // Comprehensive check in URL and hash for referrer ID
-        // Handles: ?tgWebAppStartParam=, ?startapp=, ?start_param=, ?ref=, and #tgWebAppData hash parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        let extractedParam = urlParams.get("tgWebAppStartParam") ||
-                             urlParams.get("startapp") ||
-                             urlParams.get("start_param") ||
-                             urlParams.get("start") ||
-                             urlParams.get("ref");
-
-        if (!extractedParam && window.location.hash) {
-          try {
-            const hashString = window.location.hash.substring(1);
-            const hashParams = new URLSearchParams(hashString);
-            extractedParam = hashParams.get("tgWebAppStartParam") ||
-                             hashParams.get("startapp") ||
-                             hashParams.get("start_param") ||
-                             hashParams.get("start");
-            const rawTgWebAppData = hashParams.get("tgWebAppData");
-            if (rawTgWebAppData) {
-              const innerParams = new URLSearchParams(rawTgWebAppData);
-              extractedParam = extractedParam || innerParams.get("start_param");
+            if (tg.initDataUnsafe?.user) {
+              const u = tg.initDataUnsafe.user;
+              userId = String(u.id);
+              userFirstName = u.first_name || "Telegram User";
             }
-          } catch (err) {
-            console.warn("Could not parse hash for start_param:", err);
+          } catch (e) {
+            console.warn("Telegram WebApp SDK init error:", e);
           }
         }
 
-        if (extractedParam) {
-          startParam = String(extractedParam).trim();
-          console.log("[App] Extracted referrer ID from URL/Hash:", startParam);
-        }
-
-        // Show UI indicator if referral link detected
-        if (startParam && referralWelcomeBanner && bannerReferrerIdEl) {
-          bannerReferrerIdEl.textContent = startParam;
-          referralWelcomeBanner.classList.remove("hidden");
-        }
-
-        // Update Header UI
         userFirstNameEl.textContent = userFirstName;
         userTelegramIdEl.textContent = userId;
-        userAvatarLetterEl.textContent = (userFirstName[0] || "U").toUpperCase();
+        userAvatarEl.textContent = (userFirstName[0] || "U").toUpperCase();
 
-        // Generate Deep Link
-        updateReferralLinkInput();
-
-        return { startParam };
+        updateReferralLink();
       }
 
-      // =========================================================================
-      // 6. FIREBASE & LOCAL MOCK BACKEND
-      // =========================================================================
-      // In-memory mock store for local preview before user configures keys
-      const localStore = {
-        getUser(id) {
-          const raw = localStorage.getItem(`rtdb_user_${id}`);
-          if (raw) {
-            try { return JSON.parse(raw); } catch (e) {}
-          }
-          return { balance: 0, referrals: 0, firstName: userFirstName };
-        },
-        saveUser(id, data) {
-          localStorage.setItem(`rtdb_user_${id}`, JSON.stringify(data));
-          this.triggerListeners(id);
-        },
-        listeners: {},
-        subscribe(id, callback) {
-          if (!this.listeners[id]) this.listeners[id] = [];
-          this.listeners[id].push(callback);
-          callback(this.getUser(id));
-        },
-        triggerListeners(id) {
-          if (this.listeners[id]) {
-            const data = this.getUser(id);
-            this.listeners[id].forEach(cb => cb(data));
-          }
-        }
-      };
-
-      function initFirebaseBackend() {
-        const isConfigured = firebaseConfig.apiKey &&
-          firebaseConfig.apiKey !== "YOUR_API_KEY" &&
-          firebaseConfig.projectId &&
-          firebaseConfig.projectId !== "YOUR_PROJECT_ID";
-
-        if (isConfigured && window.firebase) {
+      function triggerHaptic(type = "light") {
+        if (window.Telegram?.WebApp?.HapticFeedback) {
           try {
-            // Initialize real Firebase App
-            const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
-
-            // Initialize Firestore targeting the specific database instance
-            const dbId = firebaseConfig.firestoreDatabaseId;
-            firestoreDb = dbId ? app.firestore(dbId) : firebase.firestore();
-
-            // Also initialize Realtime Database if databaseURL is present
-            if (firebaseConfig.databaseURL) {
-              try {
-                rtdb = firebase.database();
-              } catch (e) {
-                console.log("RTDB not configured or using Firestore default:", e);
-              }
-            }
-
-            isRealFirebase = true;
-            statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
-            statusText.textContent = "Firebase Connected";
-            statusText.className = "font-medium text-emerald-400";
-            console.log("Firebase initialized successfully with project:", firebaseConfig.projectId);
-          } catch (err) {
-            console.warn("Failed to initialize Firebase with current keys. Switching to Local Demo Mode:", err);
-            setupFallbackStatus();
-          }
-        } else {
-          setupFallbackStatus();
-        }
-      }
-
-      function setupFallbackStatus() {
-        isRealFirebase = false;
-        statusIndicatorDot.className = "w-2 h-2 rounded-full bg-amber-400";
-        statusText.textContent = "Demo Mode (Configure Firebase)";
-        statusText.className = "font-medium text-amber-300";
-      }
-
-      // =========================================================================
-      // 7. REALTIME DATABASE / FIRESTORE LISTENER & UI UPDATES
-      // =========================================================================
-      let isFirstSnapshotHandled = false;
-      let startupReferrerIdToProcess = null;
-
-      function listenToUserData(currentUserId) {
-        if (unsubscribeFirestore) {
-          unsubscribeFirestore();
-          unsubscribeFirestore = null;
-        }
-
-        if (isRealFirebase && firestoreDb) {
-          // Listen in real-time to users/{userId} in Firestore
-          const userDoc = firestoreDb.collection("users").doc(currentUserId);
-          unsubscribeFirestore = userDoc.onSnapshot((doc) => {
-            if (doc.exists) {
-              const data = doc.data() || {};
-              renderStats(data.balance || 0, data.referrals || 0);
-
-              // Update manual referral box status
-              if (data.referredBy) {
-                if (manualRefStatus) {
-                  manualRefStatus.textContent = `Claimed (#${data.referredBy})`;
-                  manualRefStatus.className = "text-[10px] text-emerald-400 font-semibold";
-                }
-                if (manualReferrerInput) {
-                  manualReferrerInput.disabled = true;
-                  manualReferrerInput.placeholder = `Referred by #${data.referredBy}`;
-                }
-                if (applyReferralBtn) {
-                  applyReferralBtn.disabled = true;
-                  applyReferralBtn.classList.add("opacity-50", "cursor-not-allowed");
-                }
-              }
-
-              // Check if there's a pending startup referral waiting for user doc to settle
-              if (!isFirstSnapshotHandled) {
-                isFirstSnapshotHandled = true;
-                if (startupReferrerIdToProcess) {
-                  const pendingRef = startupReferrerIdToProcess;
-                  startupReferrerIdToProcess = null;
-                  executeReferralCredit(pendingRef, currentUserId);
-                }
-              }
+            if (type === "success") {
+              window.Telegram.WebApp.HapticFeedback.notificationOccurred("success");
+            } else if (type === "medium") {
+              window.Telegram.WebApp.HapticFeedback.impactOccurred("medium");
             } else {
-              // Document does not exist yet. Create it safely with default values.
-              userDoc.set({
-                userId: currentUserId,
-                firstName: userFirstName,
-                balance: 0,
-                referrals: 0,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge: true }).then(() => {
-                if (!isFirstSnapshotHandled) {
-                  isFirstSnapshotHandled = true;
-                  if (startupReferrerIdToProcess) {
-                    const pendingRef = startupReferrerIdToProcess;
-                    startupReferrerIdToProcess = null;
-                    executeReferralCredit(pendingRef, currentUserId);
-                  }
-                }
-              }).catch(console.error);
-
-              renderStats(0, 0);
+              window.Telegram.WebApp.HapticFeedback.impactOccurred("light");
             }
-          }, (error) => {
-            console.error("Firebase read error:", error);
-            showToast("Firebase read error: check security rules", "⚠️");
-          });
-        } else if (isRealFirebase && rtdb) {
-          const userRef = rtdb.ref("users/" + currentUserId);
-          userRef.on("value", (snapshot) => {
-            const data = snapshot.val() || { balance: 0, referrals: 0 };
-            renderStats(data.balance || 0, data.referrals || 0);
-            if (data.referredBy) {
-              if (manualRefStatus) {
-                manualRefStatus.textContent = `Claimed (#${data.referredBy})`;
-                manualRefStatus.className = "text-[10px] text-emerald-400 font-semibold";
-              }
-              if (manualReferrerInput) {
-                manualReferrerInput.disabled = true;
-              }
-              if (applyReferralBtn) {
-                applyReferralBtn.disabled = true;
-                applyReferralBtn.classList.add("opacity-50", "cursor-not-allowed");
-              }
-            }
-          }, (error) => {
-            console.error("Firebase read error:", error);
-            showToast("Firebase read error: check security rules", "⚠️");
-          });
-        } else {
-          // Listen via Local Mock Store
-          localStore.subscribe(currentUserId, (data) => {
-            renderStats(data.balance || 0, data.referrals || 0);
-          });
+          } catch (e) {}
         }
       }
 
-      function renderStats(balance, referrals) {
-        currentBalanceEl.textContent = Number(balance).toLocaleString();
-        totalReferralsEl.innerHTML = `${Number(referrals).toLocaleString()} <span class="text-xs font-normal text-zinc-400">Friends Invited</span>`;
+      function showToast(msg, icon = "✨") {
+        const toast = document.getElementById("toast");
+        const toastMsg = document.getElementById("toastMessage");
+        const toastIcon = document.getElementById("toastIcon");
+
+        toastMsg.textContent = msg;
+        toastIcon.textContent = icon;
+
+        toast.classList.remove("-translate-y-16", "opacity-0");
+        toast.classList.add("translate-y-0", "opacity-100");
+
+        setTimeout(() => {
+          toast.classList.remove("translate-y-0", "opacity-100");
+          toast.classList.add("-translate-y-16", "opacity-0");
+        }, 2500);
+      }
+
+      function updateReferralLink() {
+        referralLinkInput.value = `https://t.me/${botUsername}?start=ref_${userId}`;
       }
 
       // =========================================================================
-      // 8. PROCESS REFERRAL CODE ON STARTUP & EXECUTE REWARD
+      // 3. BOTS.BUSINESS API SYNC ENGINE
       // =========================================================================
-      function processStartupReferral(referrerId, currentUserId) {
-        if (!referrerId) return;
+      async function fetchBalanceFromBJS() {
+        triggerHaptic("light");
+        refreshSpinner.classList.add("animate-spin-fast");
 
-        // Clean & trim referrer ID
-        const cleanReferrerId = String(referrerId).trim();
-        if (!cleanReferrerId) return;
+        const isWebhookConfigured = webhookUrl &&
+          webhookUrl !== DEFAULT_WEBHOOK_URL &&
+          !webhookUrl.includes("YOUR_BOT_ID");
 
-        // Prevent self-referral
-        if (cleanReferrerId === String(currentUserId)) {
-          console.log("Self-referral ignored: user cannot invite themselves.");
-          if (bannerStatusTextEl) {
-            bannerStatusTextEl.textContent = "Self-referral ignored (same account)";
-          }
+        if (!isWebhookConfigured) {
+          // Use Demo Fallback Mode
+          setTimeout(() => {
+            refreshSpinner.classList.remove("animate-spin-fast");
+            const bal = mockStore.getBalance(userId);
+            const ref = mockStore.getReferrals(userId);
+
+            balanceDisplay.textContent = Number(bal).toLocaleString();
+            referralsDisplay.textContent = Number(ref).toLocaleString();
+
+            statusIndicatorDot.className = "w-2 h-2 rounded-full bg-amber-400";
+            statusText.textContent = "Demo Mode (Set BJS Webhook)";
+            statusText.className = "text-[11px] font-medium text-amber-300";
+            isBjsConnected = false;
+          }, 400);
           return;
         }
 
-        console.log(`[Referral] Queuing startup referral: Referrer = ${cleanReferrerId}, Current User = ${currentUserId}`);
+        try {
+          // Prepare GET/POST call to Bots.business webhook command
+          const targetUrl = new URL(webhookUrl);
+          targetUrl.searchParams.append("command", "/api_getBalance");
+          targetUrl.searchParams.append("user_id", userId);
 
-        if (isRealFirebase && firestoreDb) {
-          // If Firestore is already synced, execute immediately. Otherwise save for first sync.
-          if (isFirstSnapshotHandled) {
-            executeReferralCredit(cleanReferrerId, currentUserId);
-          } else {
-            startupReferrerIdToProcess = cleanReferrerId;
-            // Fallback timeout in case snapshot takes too long
-            setTimeout(() => {
-              if (startupReferrerIdToProcess) {
-                const pending = startupReferrerIdToProcess;
-                startupReferrerIdToProcess = null;
-                executeReferralCredit(pending, currentUserId);
-              }
-            }, 1200);
-          }
-        } else {
-          executeReferralCredit(cleanReferrerId, currentUserId);
-        }
-      }
+          const res = await fetch(targetUrl.toString(), {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+          });
 
-      // Core referral transaction runner - idempotent & atomic
-      function executeReferralCredit(referrerId, currentUserId) {
-        const cleanReferrerId = String(referrerId).trim();
-        if (!cleanReferrerId || cleanReferrerId === String(currentUserId)) return;
+          if (res.ok) {
+            const data = await res.json();
+            if (data && (data.status === "success" || data.balance !== undefined)) {
+              balanceDisplay.textContent = Number(data.balance || 0).toLocaleString();
+              referralsDisplay.textContent = Number(data.referrals || 0).toLocaleString();
 
-        if (bannerReferrerIdEl) bannerReferrerIdEl.textContent = cleanReferrerId;
-        if (referralWelcomeBanner) referralWelcomeBanner.classList.remove("hidden");
-        if (bannerStatusTextEl) bannerStatusTextEl.textContent = "Applying +10 points reward...";
-
-        if (isRealFirebase && firestoreDb) {
-          const newUserDocRef = firestoreDb.collection("users").doc(currentUserId);
-          const referrerDocRef = firestoreDb.collection("users").doc(cleanReferrerId);
-
-          firestoreDb.runTransaction(async (transaction) => {
-            const newUserSnapshot = await transaction.get(newUserDocRef);
-            const newUserData = newUserSnapshot.exists ? newUserSnapshot.data() : {};
-
-            // Check if already claimed
-            if (newUserData.referredBy) {
-              return { status: "already_claimed", referrer: newUserData.referredBy };
-            }
-
-            // Award +10 to new user, and save who referred them
-            transaction.set(newUserDocRef, {
-              userId: currentUserId,
-              firstName: userFirstName,
-              referredBy: cleanReferrerId,
-              balance: firebase.firestore.FieldValue.increment(10),
-              referrals: newUserData.referrals || 0,
-              firstSeen: newUserData.createdAt || firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-
-            // Reward the inviter (+10 balance, +1 referral)
-            transaction.set(referrerDocRef, {
-              userId: cleanReferrerId,
-              balance: firebase.firestore.FieldValue.increment(10),
-              referrals: firebase.firestore.FieldValue.increment(1),
-              lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-
-            return { status: "success" };
-          }).then((result) => {
-            if (result.status === "success") {
-              if (bannerStatusTextEl) {
-                bannerStatusTextEl.textContent = "Reward applied! +10 Points added to both accounts.";
-              }
-              if (manualRefStatus) {
-                manualRefStatus.textContent = `Claimed (#${cleanReferrerId})`;
-                manualRefStatus.className = "text-[10px] text-emerald-400 font-semibold";
-              }
-              if (manualReferrerInput) {
-                manualReferrerInput.disabled = true;
-                manualReferrerInput.value = cleanReferrerId;
-              }
-              if (applyReferralBtn) {
-                applyReferralBtn.disabled = true;
-                applyReferralBtn.classList.add("opacity-50", "cursor-not-allowed");
-              }
-              showToast(`Referral applied! +10 Points awarded to both!`, "🎁");
+              statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+              statusText.textContent = "Synced with Bots.business";
+              statusText.className = "text-[11px] font-medium text-emerald-400";
+              isBjsConnected = true;
+              showToast("Balance synced from Bots.business!", "🔄");
             } else {
-              console.log("User was already referred by:", result.referrer);
-              if (bannerStatusTextEl) {
-                bannerStatusTextEl.textContent = `Already claimed (invited by #${result.referrer})`;
-              }
-              if (manualRefStatus) {
-                manualRefStatus.textContent = `Already Claimed (#${result.referrer})`;
-              }
+              throw new Error("Invalid BJS response format");
             }
-          }).catch((err) => {
-            console.error("Error executing referral transaction:", err);
-            // Fallback non-transaction write if security rules or transaction retries failed
-            fallbackDirectReferralWrite(cleanReferrerId, currentUserId);
-          });
-
-        } else if (isRealFirebase && rtdb) {
-          const newUserRef = rtdb.ref("users/" + currentUserId);
-          newUserRef.once("value").then((snapshot) => {
-            const userData = snapshot.val();
-            if (!userData || !userData.referredBy) {
-              newUserRef.update({
-                referredBy: cleanReferrerId,
-                balance: firebase.database.ServerValue.increment(10),
-                firstSeen: firebase.database.ServerValue.TIMESTAMP,
-                firstName: userFirstName
-              });
-
-              const referrerRef = rtdb.ref("users/" + cleanReferrerId);
-              referrerRef.update({
-                balance: firebase.database.ServerValue.increment(10),
-                referrals: firebase.database.ServerValue.increment(1)
-              });
-
-              if (bannerStatusTextEl) {
-                bannerStatusTextEl.textContent = "Reward applied! +10 Points added to both accounts.";
-              }
-              showToast(`Referral applied! +10 Points awarded to both!`, "🎁");
-            } else {
-              if (bannerStatusTextEl) {
-                bannerStatusTextEl.textContent = `Already claimed (invited by #${userData.referredBy})`;
-              }
-            }
-          }).catch((err) => {
-            console.error("RTDB error:", err);
-            if (bannerStatusTextEl) bannerStatusTextEl.textContent = "Error: " + err.message;
-          });
-
-        } else {
-          // Local fallback simulation
-          const currentUser = localStore.getUser(currentUserId);
-          if (!currentUser.referredBy) {
-            currentUser.referredBy = cleanReferrerId;
-            currentUser.balance = (currentUser.balance || 0) + 10;
-            localStore.saveUser(currentUserId, currentUser);
-
-            const referrer = localStore.getUser(cleanReferrerId);
-            referrer.balance = (referrer.balance || 0) + 10;
-            referrer.referrals = (referrer.referrals || 0) + 1;
-            localStore.saveUser(cleanReferrerId, referrer);
-
-            if (bannerStatusTextEl) {
-              bannerStatusTextEl.textContent = "Demo Reward applied! +10 to both accounts.";
-            }
-            showToast(`Referral applied! +10 Points awarded to both!`, "🎁");
           } else {
-            if (bannerStatusTextEl) {
-              bannerStatusTextEl.textContent = `Already claimed (invited by #${currentUser.referredBy})`;
-            }
+            throw new Error(`HTTP ${res.status}`);
           }
+        } catch (err) {
+          console.warn("BJS Webhook fetch error, using local fallback:", err);
+          const bal = mockStore.getBalance(userId);
+          const ref = mockStore.getReferrals(userId);
+
+          balanceDisplay.textContent = Number(bal).toLocaleString();
+          referralsDisplay.textContent = Number(ref).toLocaleString();
+
+          statusIndicatorDot.className = "w-2 h-2 rounded-full bg-rose-500";
+          statusText.textContent = "Webhook Offline / Fallback";
+          statusText.className = "text-[11px] font-medium text-rose-300";
+          isBjsConnected = false;
+        } finally {
+          refreshSpinner.classList.remove("animate-spin-fast");
         }
       }
 
-      function fallbackDirectReferralWrite(referrerId, currentUserId) {
-        if (!firestoreDb) return;
-        const newUserDoc = firestoreDb.collection("users").doc(currentUserId);
-        const referrerDoc = firestoreDb.collection("users").doc(referrerId);
+      async function claimDailyBonus() {
+        triggerHaptic("medium");
 
-        newUserDoc.get().then((doc) => {
-          const userData = doc.exists ? doc.data() : null;
-          if (!userData || !userData.referredBy) {
-            newUserDoc.set({
-              userId: currentUserId,
-              firstName: userFirstName,
-              referredBy: referrerId,
-              balance: firebase.firestore.FieldValue.increment(10),
-              referrals: userData ? (userData.referrals || 0) : 0,
-              firstSeen: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
+        const isWebhookConfigured = webhookUrl &&
+          webhookUrl !== DEFAULT_WEBHOOK_URL &&
+          !webhookUrl.includes("YOUR_BOT_ID");
 
-            referrerDoc.set({
-              balance: firebase.firestore.FieldValue.increment(10),
-              referrals: firebase.firestore.FieldValue.increment(1),
-              lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-
-            if (bannerStatusTextEl) {
-              bannerStatusTextEl.textContent = "Reward applied! +10 Points added to both accounts.";
-            }
-            showToast(`Referral applied! +10 Points awarded to both!`, "🎁");
-          } else {
-            if (bannerStatusTextEl) {
-              bannerStatusTextEl.textContent = `Already claimed (invited by #${userData.referredBy})`;
-            }
-          }
-        }).catch((err) => {
-          console.error("Direct write error:", err);
-          if (bannerStatusTextEl) {
-            bannerStatusTextEl.textContent = "Failed to update: " + err.message;
-          }
-        });
-      }
-
-      // =========================================================================
-      // 9. SIMULATE FAKE REFERRAL (TEST BUTTON)
-      // =========================================================================
-      function simulateFakeReferral() {
-        // Trigger Telegram haptic feedback if running inside Telegram WebApp
-        if (window.Telegram?.WebApp?.HapticFeedback) {
+        if (isWebhookConfigured) {
           try {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred("medium");
-          } catch (e) {}
+            const targetUrl = new URL(webhookUrl);
+            targetUrl.searchParams.append("command", "/api_action");
+            targetUrl.searchParams.append("action", "claim_daily");
+            targetUrl.searchParams.append("user_id", userId);
+
+            const res = await fetch(targetUrl.toString());
+            if (res.ok) {
+              const data = await res.json();
+              if (data.balance !== undefined) {
+                balanceDisplay.textContent = Number(data.balance).toLocaleString();
+                showToast("Claimed +10 Points via Bots.business!", "🎁");
+                triggerHaptic("success");
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn("BJS claim bonus failed:", e);
+          }
         }
 
-        if (isRealFirebase && firestoreDb) {
-          const userDoc = firestoreDb.collection("users").doc(userId);
-          userDoc.set({
-            balance: firebase.firestore.FieldValue.increment(10),
-            referrals: firebase.firestore.FieldValue.increment(1),
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true }).then(() => {
-            showToast("Test referral! +10 Points added to your balance", "⚡");
-          }).catch((err) => {
-            console.error("Database update error:", err);
-            showToast("Update failed: " + err.message, "❌");
-          });
-        } else if (isRealFirebase && rtdb) {
-          const userRef = rtdb.ref("users/" + userId);
-          userRef.update({
-            balance: firebase.database.ServerValue.increment(10),
-            referrals: firebase.database.ServerValue.increment(1),
-            lastUpdated: firebase.database.ServerValue.TIMESTAMP
-          }).then(() => {
-            showToast("Test referral! +10 Points added to your balance", "⚡");
-          }).catch((err) => {
-            console.error("Database update error:", err);
-            showToast("Update failed: " + err.message, "❌");
-          });
-        } else {
-          // Local Mock Increment
-          const current = localStore.getUser(userId);
-          current.balance = (current.balance || 0) + 10;
-          current.referrals = (current.referrals || 0) + 1;
-          localStore.saveUser(userId, current);
-
-          showToast("Test referral! +10 Points added (Demo)", "⚡");
-        }
+        // Fallback local claim
+        const current = mockStore.getBalance(userId);
+        const updated = current + 10;
+        mockStore.setBalance(userId, updated);
+        balanceDisplay.textContent = Number(updated).toLocaleString();
+        showToast("Claimed +10 Points (Demo)", "🎁");
+        triggerHaptic("success");
       }
 
       // =========================================================================
-      // 10. INVITE FRIENDS & CLIPBOARD COPY & DIRECT SHARING
+      // 4. SHARING & COPYING
       // =========================================================================
-      function shareViaTelegram() {
-        const link = referralLinkInputEl.value;
-        const shareText = encodeURIComponent("Join me on this mini app and get 10 bonus points!");
-        const shareUrl = encodeURIComponent(link);
-        const tgShareLink = `https://t.me/share/url?url=${shareUrl}&text=${shareText}`;
-
-        if (window.Telegram?.WebApp?.HapticFeedback) {
-          try {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred("medium");
-          } catch (e) {}
-        }
-
-        const tg = window.Telegram?.WebApp;
-        if (tg && typeof tg.openTelegramLink === "function") {
-          tg.openTelegramLink(tgShareLink);
-        } else {
-          window.open(tgShareLink, "_blank");
-        }
-      }
-
       function copyReferralLink() {
-        const link = referralLinkInputEl.value;
+        triggerHaptic("medium");
+        const link = referralLinkInput.value;
 
-        // Copy link to clipboard
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(link).then(onCopiedSuccess).catch(fallbackCopy);
+          navigator.clipboard.writeText(link).then(onCopied).catch(fallbackCopy);
         } else {
           fallbackCopy();
         }
 
         function fallbackCopy() {
-          referralLinkInputEl.select();
+          referralLinkInput.select();
           document.execCommand("copy");
-          onCopiedSuccess();
+          onCopied();
         }
 
-        function onCopiedSuccess() {
-          if (window.Telegram?.WebApp?.HapticFeedback) {
-            try {
-              window.Telegram.WebApp.HapticFeedback.notificationOccurred("success");
-            } catch (e) {}
-          }
+        function onCopied() {
+          triggerHaptic("success");
+          showToast("Referral link copied to clipboard!", "📋");
+        }
+      }
 
-          showToast("Referral link copied!", "📋");
+      function shareViaTelegram() {
+        triggerHaptic("medium");
+        const link = referralLinkInput.value;
+        const text = encodeURIComponent("Join me on this mini app and get 10 bonus points!");
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`;
 
-          const originalText = copyLinkIconBtn.textContent;
-          copyLinkIconBtn.textContent = "Copied!";
-          copyLinkIconBtn.classList.add("bg-emerald-600", "text-white");
-          setTimeout(() => {
-            copyLinkIconBtn.textContent = originalText;
-            copyLinkIconBtn.classList.remove("bg-emerald-600", "text-white");
-          }, 1500);
+        const tg = window.Telegram?.WebApp;
+        if (tg && typeof tg.openTelegramLink === "function") {
+          tg.openTelegramLink(shareUrl);
+        } else {
+          window.open(shareUrl, "_blank");
         }
       }
 
       // =========================================================================
-      // 11. EVENT LISTENERS & SETUP
+      // 5. EVENT LISTENERS
       // =========================================================================
+      refreshBalanceBtn.addEventListener("click", fetchBalanceFromBJS);
+      copyLinkBtn.addEventListener("click", copyReferralLink);
       inviteFriendsBtn.addEventListener("click", shareViaTelegram);
-      if (copyFullLinkBtn) copyFullLinkBtn.addEventListener("click", copyReferralLink);
-      copyLinkIconBtn.addEventListener("click", copyReferralLink);
-      simulateReferralBtn.addEventListener("click", simulateFakeReferral);
+      claimRewardBtn.addEventListener("click", claimDailyBonus);
 
-      // Link format selector tabs
-      if (linkModeStartappBtn && linkModeStartBtn) {
-        linkModeStartappBtn.addEventListener("click", () => {
-          activeLinkMode = "startapp";
-          linkModeStartappBtn.className = "py-1.5 text-[11px] font-semibold rounded-lg transition bg-telegram text-white shadow-sm";
-          linkModeStartBtn.className = "py-1.5 text-[11px] font-medium rounded-lg text-zinc-400 hover:text-zinc-200 transition";
-          updateReferralLinkInput();
-        });
-
-        linkModeStartBtn.addEventListener("click", () => {
-          activeLinkMode = "start";
-          linkModeStartBtn.className = "py-1.5 text-[11px] font-semibold rounded-lg transition bg-telegram text-white shadow-sm";
-          linkModeStartappBtn.className = "py-1.5 text-[11px] font-medium rounded-lg text-zinc-400 hover:text-zinc-200 transition";
-          updateReferralLinkInput();
-        });
-      }
-
-      // Setup Guide Modal handlers
-      viewConfigGuideBtn.addEventListener("click", () => {
+      openConfigModalBtn.addEventListener("click", () => {
+        triggerHaptic("light");
+        cfgBotUsername.value = botUsername;
+        cfgWebhookUrl.value = webhookUrl;
         configModal.classList.remove("hidden");
         configModal.classList.add("flex");
       });
-      closeModalBtn.addEventListener("click", () => {
-        configModal.classList.add("hidden");
-        configModal.classList.remove("flex");
-      });
-      gotItModalBtn.addEventListener("click", () => {
+
+      closeConfigModalBtn.addEventListener("click", () => {
         configModal.classList.add("hidden");
         configModal.classList.remove("flex");
       });
 
-      // Browser test helper: Switch mock user ID to test multi-user scenarios
-      changeTestIdBtn.addEventListener("click", () => {
-        const newId = prompt("Enter a Mock Telegram User ID to test with:", userId);
-        if (newId && newId.trim()) {
-          userId = newId.trim();
-          userTelegramIdEl.textContent = userId;
-          updateReferralLinkInput();
-          listenToUserData(userId);
-          showToast(`Switched to mock User #${userId}`, "👤");
+      saveConfigBtn.addEventListener("click", () => {
+        triggerHaptic("success");
+        botUsername = cfgBotUsername.value.trim() || DEFAULT_BOT_USERNAME;
+        webhookUrl = cfgWebhookUrl.value.trim() || DEFAULT_WEBHOOK_URL;
+
+        localStorage.setItem("bjs_bot_username", botUsername);
+        localStorage.setItem("bjs_webhook_url", webhookUrl);
+
+        updateReferralLink();
+        configModal.classList.add("hidden");
+        configModal.classList.remove("flex");
+
+        showToast("Settings saved! Fetching balance...", "⚙️");
+        fetchBalanceFromBJS();
+      });
+
+      testWebhookBtn.addEventListener("click", async () => {
+        triggerHaptic("light");
+        const urlToTest = cfgWebhookUrl.value.trim();
+        if (!urlToTest || urlToTest.includes("YOUR_BOT_ID")) {
+          showToast("Please enter a valid BJS webhook URL first", "⚠️");
+          return;
+        }
+
+        testWebhookBtn.textContent = "Testing...";
+        try {
+          const testUrl = new URL(urlToTest);
+          testUrl.searchParams.append("command", "/api_getBalance");
+          testUrl.searchParams.append("user_id", userId);
+
+          const res = await fetch(testUrl.toString());
+          if (res.ok) {
+            showToast("Webhook test successful!", "✅");
+            triggerHaptic("success");
+          } else {
+            showToast(`Webhook returned HTTP ${res.status}`, "❌");
+          }
+        } catch (err) {
+          showToast("Failed to reach webhook URL", "❌");
+        } finally {
+          testWebhookBtn.textContent = "Test Connection to Webhook";
         }
       });
 
-      // Manual referral claim handler
-      if (applyReferralBtn && manualReferrerInput) {
-        applyReferralBtn.addEventListener("click", () => {
-          const rawInput = manualReferrerInput.value.trim();
-          if (!rawInput) {
-            showToast("Please enter a friend's Telegram ID", "⚠️");
-            return;
-          }
-          if (rawInput === String(userId)) {
-            showToast("Cannot enter your own ID!", "⚠️");
-            return;
-          }
-          processStartupReferral(rawInput, userId);
-        });
-
-        manualReferrerInput.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            applyReferralBtn.click();
-          }
-        });
-      }
-
       // =========================================================================
-      // 12. RUN INITIALIZATION ON PAGE LOAD
+      // 6. INITIALIZATION
       // =========================================================================
       window.addEventListener("DOMContentLoaded", () => {
-        // Step 1: Initialize Telegram SDK & read identity
-        const { startParam } = initTelegram();
-
-        // Step 2: Initialize Firebase Realtime Database
-        initFirebaseBackend();
-
-        // Step 3: Listen to real-time changes for this user
-        listenToUserData(userId);
-
-        // Step 4: If opened with a referral code, process it
-        if (startParam) {
-          processStartupReferral(startParam, userId);
-        }
+        initTelegramApp();
+        fetchBalanceFromBJS();
       });
     </script>
   </body>
 </html>
-
-

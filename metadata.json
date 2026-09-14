@@ -1,6 +1,6 @@
 {
-  "name": "Telegram Referral Prototype",
-  "description": "Telegram Mini App prototype with Firebase Realtime Database for referral counting and live balance updates.",
+  "name": "Telegram Mini App & Bots.business Hub",
+  "description": "Production-ready Telegram Mini App synced with Bots.business (BJS) backend for balances and referrals",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
