@@ -237,18 +237,18 @@
       let userFirstName = "Alex";
       let isBjsConnected = false;
 
-      // Local Fallback Store for smooth preview when webhook is not set up
+      // Local Fallback Store starting at 0 for new users
       const mockStore = {
         getBalance(id) {
           const val = localStorage.getItem("mock_bal_" + id);
-          return val ? parseInt(val, 10) : 50;
+          return val ? parseInt(val, 10) : 0;
         },
         setBalance(id, val) {
           localStorage.setItem("mock_bal_" + id, val);
         },
         getReferrals(id) {
           const val = localStorage.getItem("mock_ref_" + id);
-          return val ? parseInt(val, 10) : 3;
+          return val ? parseInt(val, 10) : 0;
         },
         setReferrals(id, val) {
           localStorage.setItem("mock_ref_" + id, val);
