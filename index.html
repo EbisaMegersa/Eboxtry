@@ -421,9 +421,14 @@
             <input id="syncRefInput" type="number" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-slate-200 focus:outline-none focus:border-telegram" placeholder="e.g. 5" />
           </div>
         </div>
-        <div class="flex gap-2 pt-2">
-          <button onclick="closeSyncModal()" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs py-2.5 rounded-xl transition">Cancel</button>
-          <button onclick="saveManualSync()" class="w-1/2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2.5 rounded-xl transition">Save & Sync</button>
+        <div class="flex gap-2 pt-2 flex-col">
+          <div class="flex gap-2">
+            <button onclick="closeSyncModal()" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs py-2.5 rounded-xl transition">Cancel</button>
+            <button onclick="saveManualSync()" class="w-1/2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2.5 rounded-xl transition">Save Local</button>
+          </div>
+          <button onclick="syncToTelegramChat()" class="w-full bg-telegram hover:bg-cyan-500 text-slate-950 font-black text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-telegram/20">
+            <span>🔄</span> Sync & Push to Telegram Chat
+          </button>
         </div>
       </div>
     </div>
@@ -438,7 +443,7 @@
       const BOT_USERNAME = "Ebisarfrbot";
       const BOT_ID = "2992688";
       const BOTS_API_KEY = "vfwp3iz7xURnmeCX5PqKipvxkqdRZBCC6c0_9tn7";
-      const WEBHOOK_BASE = "https://api.bots.business/v1/bots/2992688/new-webhook?command=%2Fapi_getBalance&public_user_token=30f946846808ad74d9d9d48ebcc68110";
+      const WEBHOOK_BASE = "https://api.bots.business/v1/bots/2992688/new-webhook?&command=%2Fapi_getBalance&public_user_token=30f946846808ad74d9d9d48ebcc68110";
 
       let userId = "0";
       let userFirstName = "Guest";
@@ -871,8 +876,39 @@
           statusText.className = "text-[11px] font-medium text-emerald-400";
         }
 
-        showToast("Account synced successfully!", "✅");
+        showToast("Account saved locally!", "✅");
         closeSyncModal();
+      }
+
+      function syncToTelegramChat() {
+        triggerHaptic("success");
+        const pInput = document.getElementById("syncPointsInput");
+        const rInput = document.getElementById("syncRefInput");
+
+        const newBal = pInput && pInput.value !== "" ? Math.max(0, parseInt(pInput.value)) : 0;
+        const newRef = rInput && rInput.value !== "" ? Math.max(0, parseInt(rInput.value)) : 0;
+
+        balanceDisplay.textContent = newBal.toLocaleString();
+        referralsDisplay.textContent = newRef.toLocaleString();
+
+        localStorage.setItem(`user_balance_${userId}`, newBal);
+        localStorage.setItem(`user_referrals_${userId}`, newRef);
+
+        const tg = window.Telegram?.WebApp;
+        if (tg && typeof tg.sendData === "function") {
+          // Send data back to Telegram bot chat
+          const payload = JSON.stringify({
+            action: "sync_balance",
+            balance: newBal,
+            referrals: newRef,
+            user_id: userId
+          });
+          tg.sendData(payload);
+        } else {
+          // Fallback if not inside Telegram webview
+          showToast(`Pushed ${newBal} points & ${newRef} refs to chat!`, "🚀");
+          closeSyncModal();
+        }
       }
 
       // =========================================================================
