@@ -426,7 +426,7 @@
       const inviteFriendsBtn = document.getElementById("inviteFriendsBtn");
 
       // =========================================================================
-      // TELEGRAM WEBAPP SDK SETUP
+      // TELEGRAM WEBAPP SDK SETUP & PARSING
       // =========================================================================
       function initTelegramApp() {
         const tg = window.Telegram?.WebApp;
@@ -464,11 +464,38 @@
         // Unique referral link format: https://t.me/Ebisarfrbot?start=ref_<userId>
         referralLinkInput.value = `https://t.me/${BOT_USERNAME}?start=ref_${userId}`;
 
-        // Load cached account data specific to this user ID
-        const cachedBalance = localStorage.getItem(`user_balance_${userId}`);
-        const cachedReferrals = localStorage.getItem(`user_referrals_${userId}`);
-        if (cachedBalance !== null) balanceDisplay.textContent = Number(cachedBalance).toLocaleString();
-        if (cachedReferrals !== null) referralsDisplay.textContent = Number(cachedReferrals).toLocaleString();
+        // -----------------------------------------------------------------------
+        // Check URL Query Parameters for Telegram Chat Sync (?bal=65&ref=5)
+        // -----------------------------------------------------------------------
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlBal = urlParams.get("bal") || urlParams.get("balance") || urlParams.get("points");
+        const urlRef = urlParams.get("ref") || urlParams.get("referrals") || urlParams.get("friends");
+
+        if (urlBal !== null) {
+          const syncedBal = Number(urlBal) || 0;
+          balanceDisplay.textContent = syncedBal.toLocaleString();
+          localStorage.setItem(`user_balance_${userId}`, syncedBal);
+        } else {
+          const cachedBalance = localStorage.getItem(`user_balance_${userId}`);
+          if (cachedBalance !== null) balanceDisplay.textContent = Number(cachedBalance).toLocaleString();
+        }
+
+        if (urlRef !== null) {
+          const syncedRef = Number(urlRef) || 0;
+          referralsDisplay.textContent = syncedRef.toLocaleString();
+          localStorage.setItem(`user_referrals_${userId}`, syncedRef);
+        } else {
+          const cachedReferrals = localStorage.getItem(`user_referrals_${userId}`);
+          if (cachedReferrals !== null) referralsDisplay.textContent = Number(cachedReferrals).toLocaleString();
+        }
+
+        if (urlBal !== null || urlRef !== null) {
+          if (statusIndicatorDot && statusText) {
+            statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+            statusText.textContent = "Synced with Telegram Bot";
+            statusText.className = "text-[11px] font-medium text-emerald-400";
+          }
+        }
 
         const isDailyClaimed = localStorage.getItem(`daily_claimed_${userId}`);
         if (isDailyClaimed === "true") {
@@ -589,7 +616,7 @@
 
           if (statusIndicatorDot && statusText) {
             statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500";
-            statusText.textContent = "Synced (Local Account)";
+            statusText.textContent = "Synced with User Account";
             statusText.className = "text-[11px] font-medium text-emerald-400";
           }
         } finally {
