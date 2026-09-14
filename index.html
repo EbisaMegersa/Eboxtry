@@ -467,6 +467,16 @@
         const cachedReferrals = localStorage.getItem(`user_referrals_${userId}`);
         if (cachedBalance !== null) balanceDisplay.textContent = Number(cachedBalance).toLocaleString();
         if (cachedReferrals !== null) referralsDisplay.textContent = Number(cachedReferrals).toLocaleString();
+
+        const isDailyClaimed = localStorage.getItem(`daily_claimed_${userId}`);
+        if (isDailyClaimed === "true") {
+          const btn = document.getElementById("claimDailyBtn");
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Claimed";
+            btn.className = "bg-slate-800 text-slate-500 font-bold text-xs px-3.5 py-2 rounded-xl cursor-not-allowed";
+          }
+        }
       }
 
       function triggerHaptic(type = "light") {
@@ -675,7 +685,11 @@
         triggerHaptic("medium");
 
         const currentVal = parseInt(balanceDisplay.textContent.replace(/,/g, "")) || 0;
-        balanceDisplay.textContent = (currentVal + 1).toLocaleString();
+        const newVal = currentVal + 1;
+        balanceDisplay.textContent = newVal.toLocaleString();
+
+        // Persist immediately per user ID
+        localStorage.setItem(`user_balance_${userId}`, newVal);
 
         const energyDisplay = document.getElementById("mineEnergyDisplay");
         if (energyDisplay) energyDisplay.textContent = `${mineEnergy} / 100`;
@@ -686,7 +700,13 @@
       function claimDaily() {
         triggerHaptic("success");
         const currentVal = parseInt(balanceDisplay.textContent.replace(/,/g, "")) || 0;
-        balanceDisplay.textContent = (currentVal + 2).toLocaleString();
+        const newVal = currentVal + 2;
+        balanceDisplay.textContent = newVal.toLocaleString();
+
+        // Persist immediately per user ID
+        localStorage.setItem(`user_balance_${userId}`, newVal);
+        localStorage.setItem(`daily_claimed_${userId}`, "true");
+
         showToast("Claimed +2 Daily Points!", "🎁");
 
         const btn = document.getElementById("claimDailyBtn");
@@ -722,6 +742,10 @@
           triggerHaptic("medium");
           return;
         }
+
+        const newVal = currentVal - amount;
+        balanceDisplay.textContent = newVal.toLocaleString();
+        localStorage.setItem(`user_balance_${userId}`, newVal);
 
         triggerHaptic("success");
         showToast("Withdrawal request submitted!", "✅");
