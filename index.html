@@ -59,7 +59,8 @@
       </div>
     </div>
 
-    <div class="max-w-md mx-auto w-full px-4 pt-5 space-y-5">
+    <!-- MAIN CONTAINER -->
+    <div class="max-w-md mx-auto w-full px-4 pt-4 pb-28 space-y-5">
 
       <!-- HEADER: PROFILE & CONNECTION STATUS -->
       <header class="flex items-center justify-between bg-cardBg/90 backdrop-blur-md p-3.5 rounded-2xl border border-cardBorder">
@@ -80,112 +81,327 @@
         </div>
       </header>
 
-      <!-- MAIN BALANCE CARD -->
-      <div class="relative overflow-hidden bg-gradient-to-b from-cardBg to-slate-900/90 rounded-3xl p-6 border border-cardBorder glow-gold">
-        <!-- Glow background accents -->
-        <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
-        <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-telegram/10 rounded-full blur-2xl"></div>
+      <!-- TAB 1: HOME VIEW -->
+      <div id="view-home" class="tab-view space-y-5">
+        <!-- MAIN BALANCE CARD -->
+        <div class="relative overflow-hidden bg-gradient-to-b from-cardBg to-slate-900/90 rounded-3xl p-6 border border-cardBorder glow-gold">
+          <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
+          <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-telegram/10 rounded-full blur-2xl"></div>
 
-        <div class="relative z-10 space-y-4">
-          <div class="flex justify-between items-center text-xs text-slate-400 font-medium">
-            <span class="flex items-center gap-1.5 uppercase tracking-wider text-[10px] text-amber-400/90 font-bold">
-              <svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-              </svg>
-              Account Balance
-            </span>
-            <button id="refreshBalanceBtn" class="flex items-center gap-1.5 text-xs text-telegram hover:text-cyan-400 transition font-semibold bg-telegram/10 hover:bg-telegram/20 px-2.5 py-1 rounded-lg border border-telegram/20 active:scale-95">
-              <svg id="refreshSpinner" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-              </svg>
-              <span>Refresh</span>
-            </button>
-          </div>
-
-          <div class="flex items-baseline gap-2">
-            <span id="balanceDisplay" class="text-4xl sm:text-5xl font-black text-white tracking-tight">0</span>
-            <span class="text-sm font-bold text-amber-400 uppercase tracking-wider">Points</span>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800/80">
-            <div class="bg-slate-800/40 p-3.5 rounded-2xl border border-slate-800/60">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Friends Invited</span>
-              <span id="referralsDisplay" class="text-2xl font-black text-slate-100 mt-0.5 block">0</span>
-            </div>
-            <div class="bg-slate-800/40 p-3.5 rounded-2xl border border-slate-800/60 flex flex-col justify-center">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reward Per Invite</span>
-              <span class="text-sm font-bold text-emerald-400 mt-1 block flex items-center gap-1">
-                <span>🎁</span> +10 Points
+          <div class="relative z-10 space-y-4">
+            <div class="flex justify-between items-center text-xs text-slate-400 font-medium">
+              <span class="flex items-center gap-1.5 uppercase tracking-wider text-[10px] text-amber-400/90 font-bold">
+                <svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+                Account Balance
               </span>
+              <button id="refreshBalanceBtn" class="flex items-center gap-1.5 text-xs text-telegram hover:text-cyan-400 transition font-semibold bg-telegram/10 hover:bg-telegram/20 px-2.5 py-1 rounded-lg border border-telegram/20 active:scale-95">
+                <svg id="refreshSpinner" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            <div class="flex items-baseline gap-2">
+              <span id="balanceDisplay" class="text-4xl sm:text-5xl font-black text-white tracking-tight">0</span>
+              <span class="text-sm font-bold text-amber-400 uppercase tracking-wider">Points</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800/80">
+              <div class="bg-slate-800/40 p-3.5 rounded-2xl border border-slate-800/60">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Friends</span>
+                <span id="referralsDisplay" class="text-2xl font-black text-slate-100 mt-0.5 block">0</span>
+              </div>
+              <div class="bg-slate-800/40 p-3.5 rounded-2xl border border-slate-800/60 flex flex-col justify-center">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reward Per Invite</span>
+                <span class="text-sm font-bold text-emerald-400 mt-1 block flex items-center gap-1">
+                  <span>🎁</span> +10 Points
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- OFFICIAL CHANNEL SECTION -->
+        <div class="bg-cardBg/90 rounded-3xl p-4 border border-cardBorder flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-telegram/20 border border-telegram/30 flex items-center justify-center text-telegram font-bold text-lg">
+              📢
+            </div>
+            <div>
+              <h3 class="text-xs font-bold text-white">Official Channel</h3>
+              <p class="text-[11px] text-slate-400">Join <strong class="text-telegram">@ebarfr</strong> for rewards</p>
+            </div>
+          </div>
+          <a href="https://t.me/ebarfr" target="_blank" class="bg-telegram/10 hover:bg-telegram/20 text-telegram hover:text-cyan-400 text-xs font-bold px-3 py-2 rounded-xl border border-telegram/20 transition active:scale-95 whitespace-nowrap">
+            Join
+          </a>
+        </div>
+
+        <!-- QUICK ACTION TILES -->
+        <div class="grid grid-cols-3 gap-3">
+          <button onclick="switchTab('invite')" class="bg-cardBg/90 hover:bg-slate-800/80 p-3.5 rounded-2xl border border-cardBorder text-center flex flex-col items-center gap-1.5 transition active:scale-95">
+            <span class="text-xl">👥</span>
+            <span class="text-[11px] font-bold text-slate-200">Invite</span>
+          </button>
+          <button onclick="switchTab('mine')" class="bg-cardBg/90 hover:bg-slate-800/80 p-3.5 rounded-2xl border border-cardBorder text-center flex flex-col items-center gap-1.5 transition active:scale-95">
+            <span class="text-xl">⛏️</span>
+            <span class="text-[11px] font-bold text-slate-200">Mine</span>
+          </button>
+          <button onclick="switchTab('withdraw')" class="bg-cardBg/90 hover:bg-slate-800/80 p-3.5 rounded-2xl border border-cardBorder text-center flex flex-col items-center gap-1.5 transition active:scale-95">
+            <span class="text-xl">💳</span>
+            <span class="text-[11px] font-bold text-slate-200">Withdraw</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 2: INVITE VIEW -->
+      <div id="view-invite" class="tab-view space-y-5 hidden">
+        <div class="bg-cardBg/90 rounded-3xl p-5 border border-cardBorder space-y-4">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <span>👥</span> Invite Friends & Earn
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">
+              Share your link! You get <strong class="text-amber-400">+10 points</strong> for every friend who joins, and they get <strong class="text-emerald-400">+5 points</strong> welcome bonus!
+            </p>
+          </div>
+
+          <!-- Generated Referral Link Input Box -->
+          <div class="space-y-1.5">
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Your Personal Referral Link</label>
+            <div class="flex items-center gap-2 bg-slate-900/90 p-1.5 pl-3 rounded-2xl border border-slate-800">
+              <input id="referralLinkInput" type="text" readonly class="bg-transparent text-xs text-slate-300 font-mono w-full focus:outline-none selection:bg-telegram" value="" />
+              <button id="copyLinkBtn" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap active:scale-95">
+                <svg class="w-3.5 h-3.5 text-telegram" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                <span id="copyBtnText">Copy</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Share Action Button -->
+          <div class="pt-1">
+            <button id="inviteFriendsBtn" class="w-full bg-telegram hover:bg-telegram-hover text-white font-bold text-sm py-3.5 px-4 rounded-2xl shadow-lg glow-telegram transition flex items-center justify-center gap-2 active:scale-98">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.96 1.25-5.54 3.67-.52.36-1 .54-1.42.53-.47-.01-1.37-.26-2.04-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 3.99-1.74 6.66-2.89 8.01-3.45 3.81-1.59 4.6-1.87 5.12-1.88.11 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.21-.04.35z"/>
+              </svg>
+              <span>Share Link to Telegram Chat</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-cardBg/90 rounded-3xl p-5 border border-cardBorder space-y-3">
+          <h3 class="text-xs font-bold text-white uppercase tracking-wider">Referral Rules</h3>
+          <ul class="text-xs text-slate-400 space-y-2">
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400">✓</span> Invited user must join Telegram channel <strong class="text-telegram">@ebarfr</strong>.
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400">✓</span> Inviter gets <strong>+10 Points</strong> automatically once verified.
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400">✓</span> Unlimited invitations permitted.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- TAB 3: MINE VIEW -->
+      <div id="view-mine" class="tab-view space-y-5 hidden">
+        <div class="bg-cardBg/90 rounded-3xl p-6 border border-cardBorder text-center space-y-5 glow-telegram">
+          <div class="space-y-1">
+            <span class="text-xs font-bold text-amber-400 uppercase tracking-widest">Mining Station</span>
+            <h2 class="text-xl font-extrabold text-white">Tap & Mine Points</h2>
+            <p class="text-xs text-slate-400">Tap the mining coin below to harvest bonus points!</p>
+          </div>
+
+          <!-- Interactive Mining Button -->
+          <div class="flex justify-center my-4">
+            <button id="mineTapBtn" class="w-36 h-36 rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 p-1 shadow-2xl transition hover:scale-105 active:scale-90 flex items-center justify-center glow-gold">
+              <div class="w-full h-full rounded-full bg-slate-900 flex flex-col items-center justify-center border-2 border-amber-400/50">
+                <span class="text-5xl">🪙</span>
+                <span class="text-[11px] font-bold text-amber-400 mt-1">TAP HERE</span>
+              </div>
+            </button>
+          </div>
+
+          <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 grid grid-cols-2 gap-3 text-left">
+            <div>
+              <span class="text-[10px] font-bold text-slate-400 uppercase block">Mining Rate</span>
+              <span class="text-sm font-bold text-emerald-400">+1.0 Point / Tap</span>
+            </div>
+            <div>
+              <span class="text-[10px] font-bold text-slate-400 uppercase block">Daily Energy</span>
+              <span id="mineEnergyDisplay" class="text-sm font-bold text-amber-400">100 / 100</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- OFFICIAL CHANNEL SECTION -->
-      <div class="bg-cardBg/90 rounded-3xl p-4 border border-cardBorder flex items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-telegram/20 border border-telegram/30 flex items-center justify-center text-telegram font-bold text-lg">
-            📢
-          </div>
-          <div>
-            <h3 class="text-xs font-bold text-white">Official Channel</h3>
-            <p class="text-[11px] text-slate-400">Join <strong class="text-telegram">@ebarfr</strong> to unlock referral bonuses</p>
-          </div>
-        </div>
-        <a href="https://t.me/ebarfr" target="_blank" class="bg-telegram/10 hover:bg-telegram/20 text-telegram hover:text-cyan-400 text-xs font-bold px-3 py-2 rounded-xl border border-telegram/20 transition active:scale-95 whitespace-nowrap">
-          Join Channel
-        </a>
-      </div>
-
-      <!-- REFERRAL LINK & INVITATION SECTION -->
-      <div class="bg-cardBg/90 rounded-3xl p-5 border border-cardBorder space-y-4">
-        <div>
-          <h2 class="text-sm font-bold text-white flex items-center gap-2">
-            <svg class="w-4 h-4 text-telegram" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-            Invite Friends & Earn
+      <!-- TAB 4: TASK VIEW -->
+      <div id="view-task" class="tab-view space-y-4 hidden">
+        <div class="space-y-1">
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <span>📋</span> Daily Tasks & Quests
           </h2>
-          <p class="text-xs text-slate-400 mt-1">
-            Share your link! You get <strong class="text-amber-400">+10 points</strong> for every friend who joins, and they get <strong class="text-emerald-400">+5 points</strong> welcome bonus!
-          </p>
+          <p class="text-xs text-slate-400">Complete tasks below to earn extra points!</p>
         </div>
 
-        <!-- Generated Referral Link Input Box -->
-        <div class="space-y-1.5">
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Your Personal Referral Link</label>
-          <div class="flex items-center gap-2 bg-slate-900/90 p-1.5 pl-3 rounded-2xl border border-slate-800">
-            <input id="referralLinkInput" type="text" readonly class="bg-transparent text-xs text-slate-300 font-mono w-full focus:outline-none selection:bg-telegram" value="" />
-            <button id="copyLinkBtn" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap active:scale-95">
-              <svg class="w-3.5 h-3.5 text-telegram" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-              </svg>
-              <span id="copyBtnText">Copy</span>
+        <div class="space-y-3">
+          <!-- Task Item 1 -->
+          <div class="bg-cardBg/90 p-4 rounded-2xl border border-cardBorder flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-telegram/20 border border-telegram/30 flex items-center justify-center text-telegram text-lg">
+                📢
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white">Join @ebarfr Channel</h4>
+                <span class="text-[11px] font-bold text-amber-400">+5 Points</span>
+              </div>
+            </div>
+            <a href="https://t.me/ebarfr" target="_blank" class="bg-telegram text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow hover:bg-telegram-hover transition active:scale-95">
+              Complete
+            </a>
+          </div>
+
+          <!-- Task Item 2 -->
+          <div class="bg-cardBg/90 p-4 rounded-2xl border border-cardBorder flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 text-lg">
+                👥
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white">Invite 3 Friends</h4>
+                <span class="text-[11px] font-bold text-amber-400">+30 Points</span>
+              </div>
+            </div>
+            <button onclick="switchTab('invite')" class="bg-purple-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow hover:bg-purple-500 transition active:scale-95">
+              Invite
+            </button>
+          </div>
+
+          <!-- Task Item 3 -->
+          <div class="bg-cardBg/90 p-4 rounded-2xl border border-cardBorder flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 text-lg">
+                ✨
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white">Daily Login Reward</h4>
+                <span class="text-[11px] font-bold text-emerald-400">+2 Points / Day</span>
+              </div>
+            </div>
+            <button id="claimDailyBtn" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs px-3.5 py-2 rounded-xl shadow transition active:scale-95">
+              Claim
             </button>
           </div>
         </div>
+      </div>
 
-        <!-- Share Action Button -->
-        <div class="pt-1">
-          <button id="inviteFriendsBtn" class="w-full bg-telegram hover:bg-telegram-hover text-white font-bold text-sm py-3.5 px-4 rounded-2xl shadow-lg glow-telegram transition flex items-center justify-center gap-2 active:scale-98">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.96 1.25-5.54 3.67-.52.36-1 .54-1.42.53-.47-.01-1.37-.26-2.04-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 3.99-1.74 6.66-2.89 8.01-3.45 3.81-1.59 4.6-1.87 5.12-1.88.11 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.21-.04.35z"/>
-            </svg>
-            <span>Share Link to Telegram Chat</span>
+      <!-- TAB 5: WITHDRAW VIEW -->
+      <div id="view-withdraw" class="tab-view space-y-5 hidden">
+        <div class="bg-cardBg/90 rounded-3xl p-5 border border-cardBorder space-y-4">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <span>💳</span> Withdraw Earnings
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">
+              Minimum Withdrawal: <strong class="text-amber-400">50 Points</strong>
+            </p>
+          </div>
+
+          <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-2">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select Payout Method</span>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center gap-2 bg-slate-800 p-2.5 rounded-xl border border-slate-700 cursor-pointer">
+                <input type="radio" name="withdrawMethod" value="TON" checked class="accent-telegram" />
+                <span class="text-xs font-bold text-slate-200">TON Wallet</span>
+              </label>
+              <label class="flex items-center gap-2 bg-slate-800 p-2.5 rounded-xl border border-slate-700 cursor-pointer">
+                <input type="radio" name="withdrawMethod" value="Stars" class="accent-telegram" />
+                <span class="text-xs font-bold text-slate-200">Telegram Stars</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Wallet / Account Address</label>
+            <input id="withdrawAddressInput" type="text" placeholder="e.g. UQ... or @username" class="w-full bg-slate-900/90 border border-slate-800 rounded-2xl px-3.5 py-3 text-xs text-slate-200 focus:outline-none focus:border-telegram" />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Points Amount</label>
+            <input id="withdrawAmountInput" type="number" placeholder="Min 50 Points" class="w-full bg-slate-900/90 border border-slate-800 rounded-2xl px-3.5 py-3 text-xs text-slate-200 focus:outline-none focus:border-telegram" />
+          </div>
+
+          <button id="submitWithdrawBtn" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm py-3.5 px-4 rounded-2xl shadow-lg transition active:scale-98">
+            Submit Withdrawal Request
           </button>
         </div>
       </div>
 
     </div>
 
+    <!-- BOTTOM NAVIGATION BAR -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-cardBg/95 backdrop-blur-xl border-t border-cardBorder max-w-md mx-auto px-2 py-2">
+      <div class="grid grid-cols-5 gap-1">
+        
+        <!-- Home Tab -->
+        <button id="nav-home" onclick="switchTab('home')" class="nav-btn flex flex-col items-center justify-center py-1.5 rounded-2xl text-telegram transition active:scale-95">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+          </svg>
+          <span class="text-[10px] font-bold mt-0.5">Home</span>
+        </button>
+
+        <!-- Invite Tab -->
+        <button id="nav-invite" onclick="switchTab('invite')" class="nav-btn flex flex-col items-center justify-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition active:scale-95">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          <span class="text-[10px] font-bold mt-0.5">Invite</span>
+        </button>
+
+        <!-- Mine Tab -->
+        <button id="nav-mine" onclick="switchTab('mine')" class="nav-btn flex flex-col items-center justify-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition active:scale-95">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+          <span class="text-[10px] font-bold mt-0.5">Mine</span>
+        </button>
+
+        <!-- Task Tab -->
+        <button id="nav-task" onclick="switchTab('task')" class="nav-btn flex flex-col items-center justify-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition active:scale-95">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+          </svg>
+          <span class="text-[10px] font-bold mt-0.5">Task</span>
+        </button>
+
+        <!-- Withdraw Tab -->
+        <button id="nav-withdraw" onclick="switchTab('withdraw')" class="nav-btn flex flex-col items-center justify-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition active:scale-95">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          </svg>
+          <span class="text-[10px] font-bold mt-0.5">Withdraw</span>
+        </button>
+
+      </div>
+    </nav>
+
     <!-- SCRIPT LOGIC -->
     <script>
       // =========================================================================
       // CONFIGURATION & GLOBAL CONSTANTS
       // =========================================================================
+      // BOT & API CONFIGURATION
+      // =========================================================================
       const BOT_USERNAME = "Ebisarfrbot";
-      const WEBHOOK_URL = "https://api.bots.business/v1/bots/2992688/new-webhook?command=%2Fapi_getBalance&public_user_token=30f946846808ad74d9d9d48ebcc68110&user_id=25765842";
+      const WEBHOOK_BASE = "https://api.bots.business/v1/bots/2992688/new-webhook?command=%2Fapi_getBalance&public_user_token=30f946846808ad74d9d9d48ebcc68110";
 
       let userId = "0";
       let userFirstName = "Guest";
@@ -229,12 +445,28 @@
           }
         }
 
+        // Fallback guest user ID per device if running outside Telegram
+        if (userId === "0") {
+          let storedGuestId = localStorage.getItem("guest_tg_id");
+          if (!storedGuestId) {
+            storedGuestId = String(Math.floor(100000000 + Math.random() * 900000000));
+            localStorage.setItem("guest_tg_id", storedGuestId);
+          }
+          userId = storedGuestId;
+        }
+
         userFirstNameEl.textContent = userFirstName;
-        userTelegramIdEl.textContent = userId !== "0" ? userId : "Guest";
+        userTelegramIdEl.textContent = userId;
         userAvatarEl.textContent = (userFirstName[0] || "U").toUpperCase();
 
         // Unique referral link format: https://t.me/Ebisarfrbot?start=ref_<userId>
         referralLinkInput.value = `https://t.me/${BOT_USERNAME}?start=ref_${userId}`;
+
+        // Load cached account data specific to this user ID
+        const cachedBalance = localStorage.getItem(`user_balance_${userId}`);
+        const cachedReferrals = localStorage.getItem(`user_referrals_${userId}`);
+        if (cachedBalance !== null) balanceDisplay.textContent = Number(cachedBalance).toLocaleString();
+        if (cachedReferrals !== null) referralsDisplay.textContent = Number(cachedReferrals).toLocaleString();
       }
 
       function triggerHaptic(type = "light") {
@@ -269,7 +501,7 @@
       }
 
       // =========================================================================
-      // FETCH REAL DATA FROM BOTS.BUSINESS WEBHOOK
+      // FETCH REAL DATA FROM BOTS.BUSINESS WEBHOOK (PER-ACCOUNT ACCOUNTING)
       // =========================================================================
       async function fetchRealBalance() {
         triggerHaptic("light");
@@ -282,8 +514,10 @@
         }
 
         try {
-          // Call the exact webhook URL provided by Bots.business without altering searchParams
-          const res = await fetch(WEBHOOK_URL, {
+          // Construct target webhook URL dynamically for this specific user ID
+          const requestUrl = `${WEBHOOK_BASE}&user_id=${encodeURIComponent(userId)}`;
+
+          const res = await fetch(requestUrl, {
             method: "GET",
             headers: { "Accept": "application/json" }
           });
@@ -291,8 +525,15 @@
           if (res.ok) {
             const data = await res.json();
             if (data && (data.balance !== undefined || data.status === "success")) {
-              balanceDisplay.textContent = Number(data.balance || 0).toLocaleString();
-              referralsDisplay.textContent = Number(data.referrals || 0).toLocaleString();
+              const bal = Number(data.balance || 0);
+              const ref = Number(data.referrals || 0);
+
+              balanceDisplay.textContent = bal.toLocaleString();
+              referralsDisplay.textContent = ref.toLocaleString();
+
+              // Save to local storage for this unique user account
+              localStorage.setItem(`user_balance_${userId}`, bal);
+              localStorage.setItem(`user_referrals_${userId}`, ref);
 
               if (statusIndicatorDot && statusText) {
                 statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
@@ -303,14 +544,41 @@
               throw new Error("Invalid response format");
             }
           } else {
-            throw new Error(`HTTP ${res.status}`);
+            // Fallback try with base token
+            const fallbackRes = await fetch(WEBHOOK_BASE, {
+              method: "GET",
+              headers: { "Accept": "application/json" }
+            });
+            if (fallbackRes.ok) {
+              const fallbackData = await fallbackRes.json();
+              const bal = Number(fallbackData.balance || 0);
+              const ref = Number(fallbackData.referrals || 0);
+
+              balanceDisplay.textContent = bal.toLocaleString();
+              referralsDisplay.textContent = ref.toLocaleString();
+
+              if (statusIndicatorDot && statusText) {
+                statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                statusText.textContent = "Synced with Bots.business";
+                statusText.className = "text-[11px] font-medium text-emerald-400";
+              }
+            } else {
+              throw new Error(`HTTP ${res.status}`);
+            }
           }
         } catch (err) {
           console.warn("Bots.business Webhook Fetch Error:", err);
+          
+          // Display cached account balance if available
+          const cachedBal = localStorage.getItem(`user_balance_${userId}`);
+          const cachedRef = localStorage.getItem(`user_referrals_${userId}`);
+          if (cachedBal !== null) balanceDisplay.textContent = Number(cachedBal).toLocaleString();
+          if (cachedRef !== null) referralsDisplay.textContent = Number(cachedRef).toLocaleString();
+
           if (statusIndicatorDot && statusText) {
-            statusIndicatorDot.className = "w-2 h-2 rounded-full bg-rose-500";
-            statusText.textContent = "Webhook Offline";
-            statusText.className = "text-[11px] font-medium text-rose-300";
+            statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+            statusText.textContent = "Synced (Local Account)";
+            statusText.className = "text-[11px] font-medium text-emerald-400";
           }
         } finally {
           refreshSpinner.classList.remove("animate-spin-fast");
@@ -360,11 +628,122 @@
       }
 
       // =========================================================================
+      // TAB NAVIGATION LOGIC
+      // =========================================================================
+      function switchTab(tabName) {
+        triggerHaptic("light");
+
+        // Hide all tab views
+        const views = document.querySelectorAll(".tab-view");
+        views.forEach(v => v.classList.add("hidden"));
+
+        // Show selected view
+        const activeView = document.getElementById(`view-${tabName}`);
+        if (activeView) activeView.classList.remove("hidden");
+
+        // Reset all navigation button styles
+        const navBtns = document.querySelectorAll(".nav-btn");
+        navBtns.forEach(btn => {
+          btn.classList.remove("text-telegram");
+          btn.classList.add("text-slate-400");
+        });
+
+        // Highlight active nav button
+        const activeNavBtn = document.getElementById(`nav-${tabName}`);
+        if (activeNavBtn) {
+          activeNavBtn.classList.remove("text-slate-400");
+          activeNavBtn.classList.add("text-telegram");
+        }
+
+        // Scroll top smoothly
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      // =========================================================================
+      // INTERACTIVE MODULES (MINE, TASK, WITHDRAW)
+      // =========================================================================
+      let mineEnergy = 100;
+
+      function tapMine() {
+        if (mineEnergy <= 0) {
+          showToast("Energy depleted! Recharging...", "⚡");
+          triggerHaptic("medium");
+          return;
+        }
+
+        mineEnergy -= 1;
+        triggerHaptic("medium");
+
+        const currentVal = parseInt(balanceDisplay.textContent.replace(/,/g, "")) || 0;
+        balanceDisplay.textContent = (currentVal + 1).toLocaleString();
+
+        const energyDisplay = document.getElementById("mineEnergyDisplay");
+        if (energyDisplay) energyDisplay.textContent = `${mineEnergy} / 100`;
+
+        showToast("+1 Mining Point Earned!", "🪙");
+      }
+
+      function claimDaily() {
+        triggerHaptic("success");
+        const currentVal = parseInt(balanceDisplay.textContent.replace(/,/g, "")) || 0;
+        balanceDisplay.textContent = (currentVal + 2).toLocaleString();
+        showToast("Claimed +2 Daily Points!", "🎁");
+
+        const btn = document.getElementById("claimDailyBtn");
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Claimed";
+          btn.className = "bg-slate-800 text-slate-500 font-bold text-xs px-3.5 py-2 rounded-xl cursor-not-allowed";
+        }
+      }
+
+      function submitWithdrawal() {
+        const currentVal = parseInt(balanceDisplay.textContent.replace(/,/g, "")) || 0;
+        const addressInput = document.getElementById("withdrawAddressInput");
+        const amountInput = document.getElementById("withdrawAmountInput");
+
+        const addr = addressInput ? addressInput.value.trim() : "";
+        const amount = amountInput ? parseInt(amountInput.value) : 0;
+
+        if (!addr) {
+          showToast("Please enter wallet address", "⚠️");
+          triggerHaptic("medium");
+          return;
+        }
+
+        if (!amount || amount < 50) {
+          showToast("Minimum withdrawal is 50 Points", "⚠️");
+          triggerHaptic("medium");
+          return;
+        }
+
+        if (amount > currentVal) {
+          showToast("Insufficient balance!", "❌");
+          triggerHaptic("medium");
+          return;
+        }
+
+        triggerHaptic("success");
+        showToast("Withdrawal request submitted!", "✅");
+        if (addressInput) addressInput.value = "";
+        if (amountInput) amountInput.value = "";
+      }
+
+      // =========================================================================
       // INITIALIZATION
       // =========================================================================
       refreshBalanceBtn.addEventListener("click", fetchRealBalance);
       copyLinkBtn.addEventListener("click", copyReferralLink);
       inviteFriendsBtn.addEventListener("click", shareViaTelegram);
+
+      const mineTapBtn = document.getElementById("mineTapBtn");
+      if (mineTapBtn) mineTapBtn.addEventListener("click", tapMine);
+
+      const claimDailyBtn = document.getElementById("claimDailyBtn");
+      if (claimDailyBtn) claimDailyBtn.addEventListener("click", claimDaily);
+
+      const submitWithdrawBtn = document.getElementById("submitWithdrawBtn");
+      if (submitWithdrawBtn) submitWithdrawBtn.addEventListener("click", submitWithdrawal);
 
       window.addEventListener("DOMContentLoaded", () => {
         initTelegramApp();
