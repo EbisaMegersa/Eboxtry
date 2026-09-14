@@ -195,6 +195,46 @@
             Opens your Mini App directly and gives +10 points to both accounts.
           </p>
         </section>
+
+        <!-- ACTIVE REFERRAL WELCOME BANNER (Shown if user arrived via an invite link) -->
+        <div id="referral-welcome-banner" class="hidden mb-4 p-3.5 bg-emerald-950/40 border border-emerald-500/40 rounded-2xl flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2.5">
+            <span class="text-xl">🎁</span>
+            <div>
+              <p class="font-semibold text-emerald-300">Invited by Friend #<span id="banner-referrer-id" class="font-mono font-bold">---</span></p>
+              <p id="banner-status-text" class="text-[11px] text-emerald-400/90 font-mono mt-0.5">Processing +10 points reward...</p>
+            </div>
+          </div>
+          <span id="banner-points-badge" class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold text-[11px]">+10 PTS</span>
+        </div>
+
+        <!-- ENTER INVITE CODE CARD (Allows users who opened via ?start or plain bot to enter their referrer's ID directly) -->
+        <div id="manual-referral-box" class="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-3 mb-4">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[11px] font-semibold text-zinc-300 flex items-center gap-1.5">
+              <span>🎟️</span> Have a friend's referral ID?
+            </span>
+            <span id="manual-ref-status" class="text-[10px] text-zinc-500">Unclaimed</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              id="manual-referrer-input"
+              placeholder="Enter Friend's Telegram ID (e.g. 12345678)"
+              class="flex-1 bg-zinc-950 border border-zinc-800 text-zinc-200 text-xs rounded-xl px-3 py-2 font-mono focus:outline-none focus:border-telegram placeholder:text-zinc-600"
+            />
+            <button
+              id="apply-referral-btn"
+              type="button"
+              class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1"
+            >
+              <span>Claim</span>
+            </button>
+          </div>
+          <p class="text-[10px] text-zinc-500 mt-1.5">
+            Gives +10 Points to you and your friend instantly.
+          </p>
+        </div>
       </div>
 
       <!-- BOTTOM ACTION BUTTONS -->
@@ -342,6 +382,12 @@
       const copyLinkIconBtn = document.getElementById("copy-link-icon-btn");
       const simulateReferralBtn = document.getElementById("simulate-referral-btn");
       const changeTestIdBtn = document.getElementById("change-test-id-btn");
+      const referralWelcomeBanner = document.getElementById("referral-welcome-banner");
+      const bannerReferrerIdEl = document.getElementById("banner-referrer-id");
+      const bannerStatusTextEl = document.getElementById("banner-status-text");
+      const manualReferrerInput = document.getElementById("manual-referrer-input");
+      const applyReferralBtn = document.getElementById("apply-referral-btn");
+      const manualRefStatus = document.getElementById("manual-ref-status");
       const linkModeStartappBtn = document.getElementById("link-mode-startapp");
       const linkModeStartBtn = document.getElementById("link-mode-start");
       const linkHintText = document.getElementById("link-hint-text");
@@ -453,6 +499,12 @@
           console.log("[App] Extracted referrer ID from URL/Hash:", startParam);
         }
 
+        // Show UI indicator if referral link detected
+        if (startParam && referralWelcomeBanner && bannerReferrerIdEl) {
+          bannerReferrerIdEl.textContent = startParam;
+          referralWelcomeBanner.classList.remove("hidden");
+        }
+
         // Update Header UI
         userFirstNameEl.textContent = userFirstName;
         userTelegramIdEl.textContent = userId;
@@ -543,6 +595,9 @@
       // =========================================================================
       // 7. REALTIME DATABASE / FIRESTORE LISTENER & UI UPDATES
       // =========================================================================
+      let isFirstSnapshotHandled = false;
+      let startupReferrerIdToProcess = null;
+
       function listenToUserData(currentUserId) {
         if (unsubscribeFirestore) {
           unsubscribeFirestore();
@@ -554,17 +609,53 @@
           const userDoc = firestoreDb.collection("users").doc(currentUserId);
           unsubscribeFirestore = userDoc.onSnapshot((doc) => {
             if (doc.exists) {
-              const data = doc.data();
+              const data = doc.data() || {};
               renderStats(data.balance || 0, data.referrals || 0);
+
+              // Update manual referral box status
+              if (data.referredBy) {
+                if (manualRefStatus) {
+                  manualRefStatus.textContent = `Claimed (#${data.referredBy})`;
+                  manualRefStatus.className = "text-[10px] text-emerald-400 font-semibold";
+                }
+                if (manualReferrerInput) {
+                  manualReferrerInput.disabled = true;
+                  manualReferrerInput.placeholder = `Referred by #${data.referredBy}`;
+                }
+                if (applyReferralBtn) {
+                  applyReferralBtn.disabled = true;
+                  applyReferralBtn.classList.add("opacity-50", "cursor-not-allowed");
+                }
+              }
+
+              // Check if there's a pending startup referral waiting for user doc to settle
+              if (!isFirstSnapshotHandled) {
+                isFirstSnapshotHandled = true;
+                if (startupReferrerIdToProcess) {
+                  const pendingRef = startupReferrerIdToProcess;
+                  startupReferrerIdToProcess = null;
+                  executeReferralCredit(pendingRef, currentUserId);
+                }
+              }
             } else {
-              // Initialize new user doc with zero balance
+              // Document does not exist yet. Create it safely with default values.
               userDoc.set({
                 userId: currentUserId,
                 firstName: userFirstName,
                 balance: 0,
                 referrals: 0,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge: true }).catch(console.error);
+              }, { merge: true }).then(() => {
+                if (!isFirstSnapshotHandled) {
+                  isFirstSnapshotHandled = true;
+                  if (startupReferrerIdToProcess) {
+                    const pendingRef = startupReferrerIdToProcess;
+                    startupReferrerIdToProcess = null;
+                    executeReferralCredit(pendingRef, currentUserId);
+                  }
+                }
+              }).catch(console.error);
+
               renderStats(0, 0);
             }
           }, (error) => {
@@ -576,6 +667,19 @@
           userRef.on("value", (snapshot) => {
             const data = snapshot.val() || { balance: 0, referrals: 0 };
             renderStats(data.balance || 0, data.referrals || 0);
+            if (data.referredBy) {
+              if (manualRefStatus) {
+                manualRefStatus.textContent = `Claimed (#${data.referredBy})`;
+                manualRefStatus.className = "text-[10px] text-emerald-400 font-semibold";
+              }
+              if (manualReferrerInput) {
+                manualReferrerInput.disabled = true;
+              }
+              if (applyReferralBtn) {
+                applyReferralBtn.disabled = true;
+                applyReferralBtn.classList.add("opacity-50", "cursor-not-allowed");
+              }
+            }
           }, (error) => {
             console.error("Firebase read error:", error);
             showToast("Firebase read error: check security rules", "⚠️");
@@ -594,94 +698,215 @@
       }
 
       // =========================================================================
-      // 8. PROCESS REFERRAL CODE ON STARTUP (start_param)
+      // 8. PROCESS REFERRAL CODE ON STARTUP & EXECUTE REWARD
       // =========================================================================
       function processStartupReferral(referrerId, currentUserId) {
         if (!referrerId) return;
 
+        // Clean & trim referrer ID
+        const cleanReferrerId = String(referrerId).trim();
+        if (!cleanReferrerId) return;
+
         // Prevent self-referral
-        if (String(referrerId) === String(currentUserId)) {
+        if (cleanReferrerId === String(currentUserId)) {
           console.log("Self-referral ignored: user cannot invite themselves.");
+          if (bannerStatusTextEl) {
+            bannerStatusTextEl.textContent = "Self-referral ignored (same account)";
+          }
           return;
         }
 
-        console.log(`Processing referral: Referrer = ${referrerId}, New User = ${currentUserId}`);
+        console.log(`[Referral] Queuing startup referral: Referrer = ${cleanReferrerId}, Current User = ${currentUserId}`);
 
         if (isRealFirebase && firestoreDb) {
-          const newUserDoc = firestoreDb.collection("users").doc(currentUserId);
+          // If Firestore is already synced, execute immediately. Otherwise save for first sync.
+          if (isFirstSnapshotHandled) {
+            executeReferralCredit(cleanReferrerId, currentUserId);
+          } else {
+            startupReferrerIdToProcess = cleanReferrerId;
+            // Fallback timeout in case snapshot takes too long
+            setTimeout(() => {
+              if (startupReferrerIdToProcess) {
+                const pending = startupReferrerIdToProcess;
+                startupReferrerIdToProcess = null;
+                executeReferralCredit(pending, currentUserId);
+              }
+            }, 1200);
+          }
+        } else {
+          executeReferralCredit(cleanReferrerId, currentUserId);
+        }
+      }
 
-          newUserDoc.get().then((doc) => {
-            const userData = doc.exists ? doc.data() : null;
-            if (!userData || !userData.referredBy) {
-              // Mark new user as referred and give them +10 welcome bonus
-              newUserDoc.set({
-                userId: currentUserId,
-                firstName: userFirstName,
-                referredBy: referrerId,
-                balance: firebase.firestore.FieldValue.increment(10),
-                referrals: userData ? (userData.referrals || 0) : 0,
-                firstSeen: firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge: true });
+      // Core referral transaction runner - idempotent & atomic
+      function executeReferralCredit(referrerId, currentUserId) {
+        const cleanReferrerId = String(referrerId).trim();
+        if (!cleanReferrerId || cleanReferrerId === String(currentUserId)) return;
 
-              // Reward the inviter (+10 balance, +1 referral)
-              const referrerDoc = firestoreDb.collection("users").doc(referrerId);
-              referrerDoc.set({
-                balance: firebase.firestore.FieldValue.increment(10),
-                referrals: firebase.firestore.FieldValue.increment(1),
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge: true });
+        if (bannerReferrerIdEl) bannerReferrerIdEl.textContent = cleanReferrerId;
+        if (referralWelcomeBanner) referralWelcomeBanner.classList.remove("hidden");
+        if (bannerStatusTextEl) bannerStatusTextEl.textContent = "Applying +10 points reward...";
 
+        if (isRealFirebase && firestoreDb) {
+          const newUserDocRef = firestoreDb.collection("users").doc(currentUserId);
+          const referrerDocRef = firestoreDb.collection("users").doc(cleanReferrerId);
+
+          firestoreDb.runTransaction(async (transaction) => {
+            const newUserSnapshot = await transaction.get(newUserDocRef);
+            const newUserData = newUserSnapshot.exists ? newUserSnapshot.data() : {};
+
+            // Check if already claimed
+            if (newUserData.referredBy) {
+              return { status: "already_claimed", referrer: newUserData.referredBy };
+            }
+
+            // Award +10 to new user, and save who referred them
+            transaction.set(newUserDocRef, {
+              userId: currentUserId,
+              firstName: userFirstName,
+              referredBy: cleanReferrerId,
+              balance: firebase.firestore.FieldValue.increment(10),
+              referrals: newUserData.referrals || 0,
+              firstSeen: newUserData.createdAt || firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            // Reward the inviter (+10 balance, +1 referral)
+            transaction.set(referrerDocRef, {
+              userId: cleanReferrerId,
+              balance: firebase.firestore.FieldValue.increment(10),
+              referrals: firebase.firestore.FieldValue.increment(1),
+              lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            return { status: "success" };
+          }).then((result) => {
+            if (result.status === "success") {
+              if (bannerStatusTextEl) {
+                bannerStatusTextEl.textContent = "Reward applied! +10 Points added to both accounts.";
+              }
+              if (manualRefStatus) {
+                manualRefStatus.textContent = `Claimed (#${cleanReferrerId})`;
+                manualRefStatus.className = "text-[10px] text-emerald-400 font-semibold";
+              }
+              if (manualReferrerInput) {
+                manualReferrerInput.disabled = true;
+                manualReferrerInput.value = cleanReferrerId;
+              }
+              if (applyReferralBtn) {
+                applyReferralBtn.disabled = true;
+                applyReferralBtn.classList.add("opacity-50", "cursor-not-allowed");
+              }
               showToast(`Referral applied! +10 Points awarded to both!`, "🎁");
             } else {
-              console.log("User was already referred previously by:", userData.referredBy);
+              console.log("User was already referred by:", result.referrer);
+              if (bannerStatusTextEl) {
+                bannerStatusTextEl.textContent = `Already claimed (invited by #${result.referrer})`;
+              }
+              if (manualRefStatus) {
+                manualRefStatus.textContent = `Already Claimed (#${result.referrer})`;
+              }
             }
           }).catch((err) => {
-            console.error("Error processing referral:", err);
+            console.error("Error executing referral transaction:", err);
+            // Fallback non-transaction write if security rules or transaction retries failed
+            fallbackDirectReferralWrite(cleanReferrerId, currentUserId);
           });
 
         } else if (isRealFirebase && rtdb) {
           const newUserRef = rtdb.ref("users/" + currentUserId);
-
-          // Check if this new user has already been recorded / already claimed a referral
           newUserRef.once("value").then((snapshot) => {
             const userData = snapshot.val();
             if (!userData || !userData.referredBy) {
               newUserRef.update({
-                referredBy: referrerId,
+                referredBy: cleanReferrerId,
                 balance: firebase.database.ServerValue.increment(10),
                 firstSeen: firebase.database.ServerValue.TIMESTAMP,
                 firstName: userFirstName
               });
 
-              const referrerRef = rtdb.ref("users/" + referrerId);
+              const referrerRef = rtdb.ref("users/" + cleanReferrerId);
               referrerRef.update({
                 balance: firebase.database.ServerValue.increment(10),
                 referrals: firebase.database.ServerValue.increment(1)
               });
 
+              if (bannerStatusTextEl) {
+                bannerStatusTextEl.textContent = "Reward applied! +10 Points added to both accounts.";
+              }
               showToast(`Referral applied! +10 Points awarded to both!`, "🎁");
+            } else {
+              if (bannerStatusTextEl) {
+                bannerStatusTextEl.textContent = `Already claimed (invited by #${userData.referredBy})`;
+              }
             }
           }).catch((err) => {
-            console.error("Error processing referral:", err);
+            console.error("RTDB error:", err);
+            if (bannerStatusTextEl) bannerStatusTextEl.textContent = "Error: " + err.message;
           });
 
         } else {
           // Local fallback simulation
           const currentUser = localStore.getUser(currentUserId);
           if (!currentUser.referredBy) {
-            currentUser.referredBy = referrerId;
+            currentUser.referredBy = cleanReferrerId;
             currentUser.balance = (currentUser.balance || 0) + 10;
             localStore.saveUser(currentUserId, currentUser);
 
-            // Reward the referrer in local store
-            const referrer = localStore.getUser(referrerId);
+            const referrer = localStore.getUser(cleanReferrerId);
             referrer.balance = (referrer.balance || 0) + 10;
             referrer.referrals = (referrer.referrals || 0) + 1;
-            localStore.saveUser(referrerId, referrer);
+            localStore.saveUser(cleanReferrerId, referrer);
 
+            if (bannerStatusTextEl) {
+              bannerStatusTextEl.textContent = "Demo Reward applied! +10 to both accounts.";
+            }
             showToast(`Referral applied! +10 Points awarded to both!`, "🎁");
+          } else {
+            if (bannerStatusTextEl) {
+              bannerStatusTextEl.textContent = `Already claimed (invited by #${currentUser.referredBy})`;
+            }
           }
         }
+      }
+
+      function fallbackDirectReferralWrite(referrerId, currentUserId) {
+        if (!firestoreDb) return;
+        const newUserDoc = firestoreDb.collection("users").doc(currentUserId);
+        const referrerDoc = firestoreDb.collection("users").doc(referrerId);
+
+        newUserDoc.get().then((doc) => {
+          const userData = doc.exists ? doc.data() : null;
+          if (!userData || !userData.referredBy) {
+            newUserDoc.set({
+              userId: currentUserId,
+              firstName: userFirstName,
+              referredBy: referrerId,
+              balance: firebase.firestore.FieldValue.increment(10),
+              referrals: userData ? (userData.referrals || 0) : 0,
+              firstSeen: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            referrerDoc.set({
+              balance: firebase.firestore.FieldValue.increment(10),
+              referrals: firebase.firestore.FieldValue.increment(1),
+              lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            if (bannerStatusTextEl) {
+              bannerStatusTextEl.textContent = "Reward applied! +10 Points added to both accounts.";
+            }
+            showToast(`Referral applied! +10 Points awarded to both!`, "🎁");
+          } else {
+            if (bannerStatusTextEl) {
+              bannerStatusTextEl.textContent = `Already claimed (invited by #${userData.referredBy})`;
+            }
+          }
+        }).catch((err) => {
+          console.error("Direct write error:", err);
+          if (bannerStatusTextEl) {
+            bannerStatusTextEl.textContent = "Failed to update: " + err.message;
+          }
+        });
       }
 
       // =========================================================================
@@ -838,6 +1063,28 @@
           showToast(`Switched to mock User #${userId}`, "👤");
         }
       });
+
+      // Manual referral claim handler
+      if (applyReferralBtn && manualReferrerInput) {
+        applyReferralBtn.addEventListener("click", () => {
+          const rawInput = manualReferrerInput.value.trim();
+          if (!rawInput) {
+            showToast("Please enter a friend's Telegram ID", "⚠️");
+            return;
+          }
+          if (rawInput === String(userId)) {
+            showToast("Cannot enter your own ID!", "⚠️");
+            return;
+          }
+          processStartupReferral(rawInput, userId);
+        });
+
+        manualReferrerInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            applyReferralBtn.click();
+          }
+        });
+      }
 
       // =========================================================================
       // 12. RUN INITIALIZATION ON PAGE LOAD
