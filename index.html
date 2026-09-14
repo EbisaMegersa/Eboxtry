@@ -347,11 +347,25 @@
       // =========================================================================
       // MANDATORY CHANNEL TASK GATE LOGIC
       // =========================================================================
+      let isTaskVerified = false;
+
       function checkStoredTaskVerification() {
-        const isVerified = localStorage.getItem(`ebarfr_task_verified_${userId}`) === "true";
-        if (isVerified) {
+        isTaskVerified = localStorage.getItem(`ebarfr_task_verified_${userId}`) === "true";
+        if (isTaskVerified) {
           markTaskAsCompleted(false);
+        } else {
+          lockReferralFeatures();
         }
+      }
+
+      function lockReferralFeatures() {
+        copyLinkBtn.classList.add("opacity-60", "cursor-not-allowed");
+        inviteFriendsBtn.classList.add("opacity-60", "cursor-not-allowed");
+      }
+
+      function unlockReferralFeatures() {
+        copyLinkBtn.classList.remove("opacity-60", "cursor-not-allowed");
+        inviteFriendsBtn.classList.remove("opacity-60", "cursor-not-allowed");
       }
 
       function handleJoinChannelClick(e) {
@@ -372,22 +386,47 @@
 
       async function handleVerifyTaskClick() {
         triggerHaptic("medium");
-        verifyBtnText.textContent = "Verifying...";
+        verifyBtnText.textContent = "Verifying with Telegram...";
 
-        setTimeout(() => {
-          if (!hasOpenedChannel && localStorage.getItem(`ebarfr_task_verified_${userId}`) !== "true") {
-            showToast("Please tap '1. Join Channel' first!", "⚠️");
-            verifyBtnText.textContent = "2. Verify Join";
-            return;
+        try {
+          // Perform live check via webhook
+          const res = await fetch(WEBHOOK_URL, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            
+            // If API explicitly returns is_member === false, block verification
+            if (data && data.is_member === false) {
+              triggerHaptic("error");
+              showToast("Not Joined Yet! Please join @ebarfr first.", "❌");
+              verifyBtnText.textContent = "2. Verify Join";
+              return;
+            }
           }
+        } catch (e) {
+          console.warn("Live check fallback:", e);
+        }
 
-          localStorage.setItem(`ebarfr_task_verified_${userId}`, "true");
-          markTaskAsCompleted(true);
-          fetchRealBalance();
-        }, 1200);
+        // Check if user tapped "1. Join Channel"
+        if (!hasOpenedChannel && !isTaskVerified) {
+          triggerHaptic("medium");
+          showToast("Tap '1. Join Channel' first to join @ebarfr!", "⚠️");
+          verifyBtnText.textContent = "2. Verify Join";
+          return;
+        }
+
+        isTaskVerified = true;
+        localStorage.setItem(`ebarfr_task_verified_${userId}`, "true");
+        markTaskAsCompleted(true);
+        unlockReferralFeatures();
+        fetchRealBalance();
       }
 
       function markTaskAsCompleted(notify = true) {
+        isTaskVerified = true;
         if (taskBadge) {
           taskBadge.textContent = "Verified ✓";
           taskBadge.className = "text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider";
@@ -407,9 +446,11 @@
           verifyTaskBtn.disabled = true;
         }
 
+        unlockReferralFeatures();
+
         if (notify) {
           triggerHaptic("success");
-          showToast("Task Verified! Channel joined successfully", "🎉");
+          showToast("Task Verified! Channel membership confirmed", "🎉");
         }
       }
 
@@ -417,6 +458,12 @@
       // SHARE & COPY LOGIC
       // =========================================================================
       function copyReferralLink() {
+        if (!isTaskVerified) {
+          triggerHaptic("medium");
+          showToast("🔒 Join @ebarfr channel first to copy your link!", "📢");
+          return;
+        }
+
         triggerHaptic("success");
         const link = referralLinkInput.value;
 
@@ -442,6 +489,12 @@
       }
 
       function shareViaTelegram() {
+        if (!isTaskVerified) {
+          triggerHaptic("medium");
+          showToast("🔒 Join @ebarfr channel first to share your link!", "📢");
+          return;
+        }
+
         triggerHaptic("medium");
         const link = referralLinkInput.value;
         const text = encodeURIComponent("🚀 Join me on this Mini App and get 5 Bonus Points immediately!");
