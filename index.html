@@ -96,12 +96,18 @@
                 </svg>
                 Account Balance
               </span>
-              <button id="refreshBalanceBtn" class="flex items-center gap-1.5 text-xs text-telegram hover:text-cyan-400 transition font-semibold bg-telegram/10 hover:bg-telegram/20 px-2.5 py-1 rounded-lg border border-telegram/20 active:scale-95">
-                <svg id="refreshSpinner" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                <span>Refresh</span>
-              </button>
+              <div class="flex items-center gap-2">
+                <button id="manualSyncBtn" onclick="openSyncModal()" class="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 transition font-semibold bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/30 active:scale-95">
+                  <span>⚙️</span>
+                  <span>Sync/Edit</span>
+                </button>
+                <button id="refreshBalanceBtn" class="flex items-center gap-1.5 text-xs text-telegram hover:text-cyan-400 transition font-semibold bg-telegram/10 hover:bg-telegram/20 px-2.5 py-1 rounded-lg border border-telegram/20 active:scale-95">
+                  <svg id="refreshSpinner" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                  </svg>
+                  <span>Refresh</span>
+                </button>
+              </div>
             </div>
 
             <div class="flex items-baseline gap-2">
@@ -392,6 +398,35 @@
 
       </div>
     </nav>
+
+    <!-- SYNC / EDIT BALANCE MODAL -->
+    <div id="syncModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-cardBg rounded-3xl p-6 border border-cardBorder max-w-xs w-full space-y-4 shadow-2xl">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <span>⚙️</span> Sync / Set Account Data
+          </h3>
+          <button onclick="closeSyncModal()" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Set your live Telegram Bot balance and invited friends count to keep them 100% matched across chat and Mini App:
+        </p>
+        <div class="space-y-3">
+          <div>
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Points Balance</label>
+            <input id="syncPointsInput" type="number" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-amber-400 focus:outline-none focus:border-amber-500" placeholder="e.g. 65" />
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Invited Friends</label>
+            <input id="syncRefInput" type="number" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-slate-200 focus:outline-none focus:border-telegram" placeholder="e.g. 5" />
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeSyncModal()" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs py-2.5 rounded-xl transition">Cancel</button>
+          <button onclick="saveManualSync()" class="w-1/2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2.5 rounded-xl transition">Save & Sync</button>
+        </div>
+      </div>
+    </div>
 
     <!-- SCRIPT LOGIC -->
     <script>
@@ -780,6 +815,51 @@
         showToast("Withdrawal request submitted!", "✅");
         if (addressInput) addressInput.value = "";
         if (amountInput) amountInput.value = "";
+      }
+
+      // =========================================================================
+      // MANUAL SYNC MODAL LOGIC
+      // =========================================================================
+      function openSyncModal() {
+        triggerHaptic("light");
+        const currentBal = parseInt(balanceDisplay.textContent.replace(/,/g, "")) || 0;
+        const currentRef = parseInt(referralsDisplay.textContent.replace(/,/g, "")) || 0;
+
+        document.getElementById("syncPointsInput").value = currentBal;
+        document.getElementById("syncRefInput").value = currentRef;
+
+        const modal = document.getElementById("syncModal");
+        if (modal) modal.classList.remove("hidden");
+      }
+
+      function closeSyncModal() {
+        triggerHaptic("light");
+        const modal = document.getElementById("syncModal");
+        if (modal) modal.classList.add("hidden");
+      }
+
+      function saveManualSync() {
+        triggerHaptic("success");
+        const pInput = document.getElementById("syncPointsInput");
+        const rInput = document.getElementById("syncRefInput");
+
+        const newBal = pInput && pInput.value !== "" ? Math.max(0, parseInt(pInput.value)) : 0;
+        const newRef = rInput && rInput.value !== "" ? Math.max(0, parseInt(rInput.value)) : 0;
+
+        balanceDisplay.textContent = newBal.toLocaleString();
+        referralsDisplay.textContent = newRef.toLocaleString();
+
+        localStorage.setItem(`user_balance_${userId}`, newBal);
+        localStorage.setItem(`user_referrals_${userId}`, newRef);
+
+        if (statusIndicatorDot && statusText) {
+          statusIndicatorDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+          statusText.textContent = "Synced (Custom Saved)";
+          statusText.className = "text-[11px] font-medium text-emerald-400";
+        }
+
+        showToast("Account synced successfully!", "✅");
+        closeSyncModal();
       }
 
       // =========================================================================
