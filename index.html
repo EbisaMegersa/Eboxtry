@@ -227,8 +227,8 @@
       // =========================================================================
       // 1. CONFIGURATION & STATE
       // =========================================================================
-      const DEFAULT_BOT_USERNAME = "MyAwesomeReferralBot";
-      const DEFAULT_WEBHOOK_URL = "https://api.bots.business/v1/bots/YOUR_BOT_ID/webhooks/YOUR_API_KEY";
+      const DEFAULT_BOT_USERNAME = "Ebisarfrbot";
+      const DEFAULT_WEBHOOK_URL = "https://api.bots.business/v1/bots/2992688/new-webhook?&command=%2Fapi_getBalance&public_user_token=181a8ee794c496d0391eb1cfdffc6122";
 
       let botUsername = localStorage.getItem("bjs_bot_username") || DEFAULT_BOT_USERNAME;
       let webhookUrl = localStorage.getItem("bjs_webhook_url") || DEFAULT_WEBHOOK_URL;
@@ -351,9 +351,7 @@
         triggerHaptic("light");
         refreshSpinner.classList.add("animate-spin-fast");
 
-        const isWebhookConfigured = webhookUrl &&
-          webhookUrl !== DEFAULT_WEBHOOK_URL &&
-          !webhookUrl.includes("YOUR_BOT_ID");
+        const isWebhookConfigured = Boolean(webhookUrl) && !webhookUrl.includes("YOUR_BOT_ID");
 
         if (!isWebhookConfigured) {
           // Use Demo Fallback Mode
@@ -374,10 +372,11 @@
         }
 
         try {
-          // Prepare GET/POST call to Bots.business webhook command
+          // Prepare GET call to Bots.business webhook command
           const targetUrl = new URL(webhookUrl);
-          targetUrl.searchParams.append("command", "/api_getBalance");
-          targetUrl.searchParams.append("user_id", userId);
+          if (!targetUrl.searchParams.has("command")) {
+            targetUrl.searchParams.set("command", "/api_getBalance");
+          }
 
           const res = await fetch(targetUrl.toString(), {
             method: "GET",
@@ -421,16 +420,13 @@
       async function claimDailyBonus() {
         triggerHaptic("medium");
 
-        const isWebhookConfigured = webhookUrl &&
-          webhookUrl !== DEFAULT_WEBHOOK_URL &&
-          !webhookUrl.includes("YOUR_BOT_ID");
+        const isWebhookConfigured = Boolean(webhookUrl) && !webhookUrl.includes("YOUR_BOT_ID");
 
         if (isWebhookConfigured) {
           try {
             const targetUrl = new URL(webhookUrl);
-            targetUrl.searchParams.append("command", "/api_action");
-            targetUrl.searchParams.append("action", "claim_daily");
-            targetUrl.searchParams.append("user_id", userId);
+            targetUrl.searchParams.set("command", "/api_action");
+            targetUrl.searchParams.set("action", "claim_daily");
 
             const res = await fetch(targetUrl.toString());
             if (res.ok) {
@@ -543,8 +539,9 @@
         testWebhookBtn.textContent = "Testing...";
         try {
           const testUrl = new URL(urlToTest);
-          testUrl.searchParams.append("command", "/api_getBalance");
-          testUrl.searchParams.append("user_id", userId);
+          if (!testUrl.searchParams.has("command")) {
+            testUrl.searchParams.set("command", "/api_getBalance");
+          }
 
           const res = await fetch(testUrl.toString());
           if (res.ok) {
