@@ -501,28 +501,41 @@
 
         // -----------------------------------------------------------------------
         // Check URL Query Parameters for Telegram Chat Sync (?bal=65&ref=5)
+        // PRESERVE locally earned points so mining & tasks are never overwritten downwards!
         // -----------------------------------------------------------------------
         const urlParams = new URLSearchParams(window.location.search);
         const urlBal = urlParams.get("bal") || urlParams.get("balance") || urlParams.get("points");
         const urlRef = urlParams.get("ref") || urlParams.get("referrals") || urlParams.get("friends");
 
+        const cachedBalance = localStorage.getItem(`user_balance_${userId}`);
+        const cachedReferrals = localStorage.getItem(`user_referrals_${userId}`);
+
+        let initialBal = 0;
+        if (cachedBalance !== null) {
+          initialBal = Number(cachedBalance);
+        }
         if (urlBal !== null) {
           const syncedBal = Number(urlBal) || 0;
-          balanceDisplay.textContent = syncedBal.toLocaleString();
-          localStorage.setItem(`user_balance_${userId}`, syncedBal);
-        } else {
-          const cachedBalance = localStorage.getItem(`user_balance_${userId}`);
-          if (cachedBalance !== null) balanceDisplay.textContent = Number(cachedBalance).toLocaleString();
+          // Only take urlBal if it's higher or if cached is 0/empty, ensuring mined points are protected
+          if (syncedBal > initialBal) {
+            initialBal = syncedBal;
+          }
         }
+        balanceDisplay.textContent = initialBal.toLocaleString();
+        localStorage.setItem(`user_balance_${userId}`, initialBal);
 
+        let initialRef = 0;
+        if (cachedReferrals !== null) {
+          initialRef = Number(cachedReferrals);
+        }
         if (urlRef !== null) {
           const syncedRef = Number(urlRef) || 0;
-          referralsDisplay.textContent = syncedRef.toLocaleString();
-          localStorage.setItem(`user_referrals_${userId}`, syncedRef);
-        } else {
-          const cachedReferrals = localStorage.getItem(`user_referrals_${userId}`);
-          if (cachedReferrals !== null) referralsDisplay.textContent = Number(cachedReferrals).toLocaleString();
+          if (syncedRef > initialRef) {
+            initialRef = syncedRef;
+          }
         }
+        referralsDisplay.textContent = initialRef.toLocaleString();
+        localStorage.setItem(`user_referrals_${userId}`, initialRef);
 
         if (urlBal !== null || urlRef !== null) {
           if (statusIndicatorDot && statusText) {
