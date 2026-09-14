@@ -122,6 +122,39 @@
         </div>
       </div>
 
+      <!-- MANDATORY TASK / CHANNEL GATE -->
+      <div id="channelTaskCard" class="bg-cardBg/90 rounded-3xl p-5 border border-amber-500/40 glow-gold space-y-3.5">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div id="taskIconBg" class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg">
+              📢
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-xs font-bold text-white">Required Task</h3>
+                <span id="taskBadge" class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Required</span>
+              </div>
+              <p class="text-[11px] text-slate-300 mt-0.5">Join <strong class="text-telegram">@ebarfr</strong> channel to activate your referral link</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="taskActionButtons" class="grid grid-cols-2 gap-2.5 pt-1">
+          <a id="joinChannelBtn" href="https://t.me/ebarfr" target="_blank" class="bg-telegram hover:bg-telegram-hover text-white text-xs font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-1.5 shadow-md active:scale-95">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.96 1.25-5.54 3.67-.52.36-1 .54-1.42.53-.47-.01-1.37-.26-2.04-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 3.99-1.74 6.66-2.89 8.01-3.45 3.81-1.59 4.6-1.87 5.12-1.88.11 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.21-.04.35z"/>
+            </svg>
+            <span>1. Join Channel</span>
+          </a>
+          <button id="verifyTaskBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-1.5 shadow-md active:scale-95">
+            <svg id="verifyIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span id="verifyBtnText">2. Verify Join</span>
+          </button>
+        </div>
+      </div>
+
       <!-- REFERRAL LINK & INVITATION SECTION -->
       <div class="bg-cardBg/90 rounded-3xl p-5 border border-cardBorder space-y-4">
         <div>
@@ -190,6 +223,16 @@
       const copyLinkBtn = document.getElementById("copyLinkBtn");
       const copyBtnText = document.getElementById("copyBtnText");
       const inviteFriendsBtn = document.getElementById("inviteFriendsBtn");
+
+      // Task Gate Elements
+      const channelTaskCard = document.getElementById("channelTaskCard");
+      const taskIconBg = document.getElementById("taskIconBg");
+      const taskBadge = document.getElementById("taskBadge");
+      const joinChannelBtn = document.getElementById("joinChannelBtn");
+      const verifyTaskBtn = document.getElementById("verifyTaskBtn");
+      const verifyBtnText = document.getElementById("verifyBtnText");
+
+      let hasOpenedChannel = false;
 
       // =========================================================================
       // TELEGRAM WEBAPP SDK SETUP
@@ -302,6 +345,75 @@
       }
 
       // =========================================================================
+      // MANDATORY CHANNEL TASK GATE LOGIC
+      // =========================================================================
+      function checkStoredTaskVerification() {
+        const isVerified = localStorage.getItem(`ebarfr_task_verified_${userId}`) === "true";
+        if (isVerified) {
+          markTaskAsCompleted(false);
+        }
+      }
+
+      function handleJoinChannelClick(e) {
+        e.preventDefault();
+        triggerHaptic("medium");
+        hasOpenedChannel = true;
+
+        const channelUrl = "https://t.me/ebarfr";
+        const tg = window.Telegram?.WebApp;
+        if (tg && typeof tg.openTelegramLink === "function") {
+          tg.openTelegramLink(channelUrl);
+        } else {
+          window.open(channelUrl, "_blank");
+        }
+
+        showToast("Joined channel? Return and tap '2. Verify Join'", "📢");
+      }
+
+      async function handleVerifyTaskClick() {
+        triggerHaptic("medium");
+        verifyBtnText.textContent = "Verifying...";
+
+        setTimeout(() => {
+          if (!hasOpenedChannel && localStorage.getItem(`ebarfr_task_verified_${userId}`) !== "true") {
+            showToast("Please tap '1. Join Channel' first!", "⚠️");
+            verifyBtnText.textContent = "2. Verify Join";
+            return;
+          }
+
+          localStorage.setItem(`ebarfr_task_verified_${userId}`, "true");
+          markTaskAsCompleted(true);
+          fetchRealBalance();
+        }, 1200);
+      }
+
+      function markTaskAsCompleted(notify = true) {
+        if (taskBadge) {
+          taskBadge.textContent = "Verified ✓";
+          taskBadge.className = "text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider";
+        }
+        if (taskIconBg) {
+          taskIconBg.className = "w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg";
+          taskIconBg.textContent = "✅";
+        }
+        if (channelTaskCard) {
+          channelTaskCard.className = "bg-cardBg/90 rounded-3xl p-5 border border-emerald-500/40 space-y-3.5";
+        }
+        if (verifyBtnText) {
+          verifyBtnText.textContent = "Task Completed ✓";
+        }
+        if (verifyTaskBtn) {
+          verifyTaskBtn.className = "bg-emerald-800/60 text-emerald-300 text-xs font-bold py-2.5 px-3 rounded-xl border border-emerald-700/50 flex items-center justify-center gap-1.5 cursor-default";
+          verifyTaskBtn.disabled = true;
+        }
+
+        if (notify) {
+          triggerHaptic("success");
+          showToast("Task Verified! Channel joined successfully", "🎉");
+        }
+      }
+
+      // =========================================================================
       // SHARE & COPY LOGIC
       // =========================================================================
       function copyReferralLink() {
@@ -350,8 +462,12 @@
       copyLinkBtn.addEventListener("click", copyReferralLink);
       inviteFriendsBtn.addEventListener("click", shareViaTelegram);
 
+      if (joinChannelBtn) joinChannelBtn.addEventListener("click", handleJoinChannelClick);
+      if (verifyTaskBtn) verifyTaskBtn.addEventListener("click", handleVerifyTaskClick);
+
       window.addEventListener("DOMContentLoaded", () => {
         initTelegramApp();
+        checkStoredTaskVerification();
         fetchRealBalance();
       });
     </script>
